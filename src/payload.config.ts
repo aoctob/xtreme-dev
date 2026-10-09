@@ -48,7 +48,7 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
   db: postgresAdapter({
-    pool: { connectionString: process.env.DATABASE_URL || '' },
+    pool: { connectionString: process.env.DATABASE_URL || process.env.xfc_DATABASE_URL || '' },
     // Local dev pushes schema automatically; deployed builds run committed migrations (PRD §J.6).
     push: process.env.NODE_ENV !== 'production',
     migrationDir: path.resolve(dirname, 'migrations'),
