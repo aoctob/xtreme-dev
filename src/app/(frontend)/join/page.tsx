@@ -1,144 +1,108 @@
 import type { Metadata } from 'next'
-import { CalendarDays, IndianRupee, MapPin, Minus, Plus, Shirt, Users } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { OrSupply, PageHero, Supply } from '@/components/Basics'
-import { Form } from '@/components/forms/Form'
-import { SocialIcon } from '@/components/SocialIcon'
-import { formatKickoff } from '@/lib/format'
-import { joinFields } from '@/lib/forms'
+import { JoinForm } from '@/components/kit/forms'
+import { Icon, type IconName } from '@/components/kit/Icon'
+import { Reveal } from '@/components/kit/motion'
+import { Accordion } from '@/components/kit/widgets'
+import { Button, PageHero, Sec, SectionHead } from '@/components/kit/ui'
+import { CLUB_NAME } from '@/lib/constants'
+import { formatDateTime } from '@/lib/format'
 import { getJoinPage, getSiteSettings } from '@/lib/queries'
+import { contactLine, responseTime, socialUrl } from '@/lib/site'
+import { supply } from '@/lib/view'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: 'Join the club / trials',
-  description: 'Apply for Xtreme FC trials: who can join, trial dates, location, what to bring and the application form.',
+  title: { absolute: `Join ${CLUB_NAME} | Trials and application` },
+  description: `Apply for ${CLUB_NAME} trials: trial dates, location, age groups, fees, what to bring and the application form.`,
   alternates: { canonical: '/join' },
 }
 
-function Fact({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-  return (
-    <li>
-      {icon}
-      <div>
-        <h3>{title}</h3>
-        <div style={{ whiteSpace: 'pre-line' }}>{children}</div>
-      </div>
-    </li>
-  )
-}
-
 export default async function JoinPage() {
-  const [join, settings] = await Promise.all([getJoinPage(), getSiteSettings()])
-  const upcomingDates = (join?.trialDates ?? [])
-    .filter((d) => new Date(d.start).getTime() > Date.now() - 86_400_000)
-    .sort((a, b) => a.start.localeCompare(b.start))
-  const dateLabels = upcomingDates.map((d) => `${formatKickoff(d.start)}${d.note ? ` (${d.note})` : ''}`)
-  const contact = settings?.email || settings?.phone || 'the club'
-  const whatsapp = settings?.whatsapp?.replace(/\D/g, '')
+  const [j, s] = await Promise.all([getJoinPage(), getSiteSettings()])
+  const upcoming = (j?.trialDates ?? []).filter((t) => new Date(t.start).getTime() > Date.now() - 864e5)
+  const trialDates = upcoming.map((t) => formatDateTime(t.start) + (t.note ? ` (${t.note})` : ''))
+  const rt = responseTime(j)
+  const faq = j?.faq?.length
+    ? j.faq.map((x) => ({ q: x.question, a: x.answer }))
+    : [
+        { q: 'Who can join?', a: j?.whoCanJoin || '[CLUB TO SUPPLY: age groups and playing levels.]' },
+        { q: 'I have never played for a club. Can I still apply?', a: 'Yes. Choose “Beginner” as your experience level on the form.' },
+        {
+          q: 'Do under-18s need a parent or guardian?',
+          a: 'Yes. If you are under 18, a parent or guardian adds their name and mobile number and gives consent. The club contacts the guardian, not the player.',
+        },
+        { q: 'What should I bring to a trial?', a: j?.whatToBring || '[CLUB TO SUPPLY]' },
+        { q: 'How much does it cost?', a: j?.fees || 'Contact the club.' },
+        { q: 'How will I hear back?', a: `The club calls or messages the number on your application ${rt}.` },
+      ]
+  const facts: [IconName, string, string][] = [
+    ['calendar', 'Trial dates', trialDates.length ? trialDates.join(' · ') : '[CLUB TO SUPPLY]'],
+    ['map-pin', 'Location', supply(j?.trialLocation)],
+    ['users', 'Age groups', supply(j?.ageGroups)],
+    ['tag', 'Fees', j?.fees || 'Contact the club'],
+    ['shirt', 'What to bring', supply(j?.whatToBring)],
+  ]
 
   return (
-    <>
-      <PageHero title="Join Xtreme FC" description="Trials, requirements and how to apply." />
-      <section className="section">
-        <div className="container split split--reverse split--top">
-          <aside className="card clip" aria-labelledby="facts-title">
-            <h2 id="facts-title" className="t-h3" style={{ marginBottom: 24 }}>
-              Key facts
-            </h2>
-            <ul role="list" className="facts">
-              <Fact icon={<Users size={24} aria-hidden="true" />} title="Who can join">
-                <OrSupply value={join?.whoCanJoin || join?.ageGroups} what="age groups and levels" />
-              </Fact>
-              <Fact icon={<CalendarDays size={24} aria-hidden="true" />} title="Trial dates">
-                {dateLabels.length ? (
-                  <ul style={{ margin: 0, paddingLeft: '1.1em' }}>
-                    {dateLabels.map((d) => (
-                      <li key={d}>{d}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <Supply what="trial dates and times" />
-                )}
-              </Fact>
-              <Fact icon={<MapPin size={24} aria-hidden="true" />} title="Location">
-                <OrSupply value={join?.trialLocation} what="trial location" />
-                {join?.trialLocationMapUrl && (
-                  <>
-                    {' '}
-                    <a href={join.trialLocationMapUrl} target="_blank" rel="noopener noreferrer">
-                      Open in maps<span className="sr-only"> (opens in a new tab)</span>
-                    </a>
-                  </>
-                )}
-              </Fact>
-              <Fact icon={<Shirt size={24} aria-hidden="true" />} title="What to bring">
-                <OrSupply value={join?.whatToBring} what="what to bring" />
-              </Fact>
-              <Fact icon={<IndianRupee size={24} aria-hidden="true" />} title="Fees">
-                {join?.fees || 'Contact the club'}
-              </Fact>
-            </ul>
-            {whatsapp && (
-              <a
-                className="btn btn--secondary"
-                style={{ marginTop: 32, width: '100%' }}
-                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent('Hi Xtreme FC, I would like to know more about trials.')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-social="whatsapp"
-              >
-                <SocialIcon network="whatsapp" size={20} /> WhatsApp the club
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            )}
+    <div>
+      <PageHero
+        title={`Join ${CLUB_NAME}`}
+        desc="Trials, requirements and the application form in one place."
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'Join' }]}
+      />
+      <section className="sec">
+        <div className="wrap join-grid">
+          <aside className="facts">
+            <Reveal className="facts-card">
+              <div className="eyebrow">Key facts</div>
+              {facts.map(([ic, l, v], i) => (
+                <Reveal i={i + 1} key={l} className="fact">
+                  <Icon name={ic} size={24} color="var(--color-primary-ink)" />
+                  <div>
+                    <div className="fact-l">{l}</div>
+                    <div className="fact-v" style={{ whiteSpace: 'pre-line' }}>
+                      {l === 'Location' && j?.trialLocationMapUrl ? (
+                        <a href={j.trialLocationMapUrl} target="_blank" rel="noopener noreferrer">
+                          {v}
+                        </a>
+                      ) : (
+                        v
+                      )}
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+              <div className="facts-wa">
+                <span className="fact-l">Already in the squad?</span>
+                <Button variant="tertiary" icon="arrow-right" href="/register">
+                  Register as a player
+                </Button>
+              </div>
+              {s?.whatsapp && (
+                <div className="facts-wa">
+                  <Button
+                    variant="tertiary"
+                    icon="arrow-up-right"
+                    href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${CLUB_NAME}, I would like to know more about trials.`)}`}
+                    external
+                    data-social="whatsapp"
+                  >
+                    WhatsApp the club
+                  </Button>
+                </div>
+              )}
+            </Reveal>
           </aside>
-
-          <div className="form-wrap" id="apply">
-            <h2 className="t-h3" style={{ marginBottom: 8 }}>
-              Apply for trials
-            </h2>
-            <p className="t-small t-secondary" style={{ marginBottom: 24 }}>
-              Applicants under 18 need a parent or guardian&apos;s name, phone number and consent.
-            </p>
-            <Form
-              kind="join"
-              fields={joinFields(dateLabels)}
-              submitLabel="Submit application"
-              successTitle="Application received"
-              successSteps={[
-                `The club will review the application and get in touch ${join?.responseTime || 'soon'}.`,
-                'Watch your phone for a call or WhatsApp message from the club.',
-                'Follow us on social media for trial updates.',
-              ]}
-              fallbackContact={contact}
-              note="We use these details only to arrange trials. See the Privacy Policy for how long we keep them and how to ask us to delete them."
-            />
-          </div>
+          <JoinForm trialDates={trialDates} contact={contactLine(s)} responseTime={rt} instagram={socialUrl(s, 'instagram')} />
         </div>
       </section>
-
-      {join?.faq && join.faq.length > 0 && (
-        <section className="section section--alt" aria-labelledby="faq-title">
-          <div className="container container--text">
-            <h2 id="faq-title" className="t-h2" style={{ marginBottom: 32 }}>
-              Questions
-            </h2>
-            <div className="faq">
-              {join.faq.slice(0, 6).map((f) => (
-                <details key={f.id ?? f.question}>
-                  <summary>
-                    {f.question}
-                    <Plus className="faq__plus" size={24} aria-hidden="true" />
-                    <Minus className="faq__minus" size={24} aria-hidden="true" />
-                  </summary>
-                  <div style={{ whiteSpace: 'pre-line' }}>{f.answer}</div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-    </>
+      <Sec alt>
+        <SectionHead eyebrow="FAQ" title="Before you apply" />
+        <div style={{ maxWidth: 820 }}>
+          <Accordion items={faq} />
+        </div>
+      </Sec>
+    </div>
   )
 }

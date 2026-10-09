@@ -1,138 +1,119 @@
 import type { Metadata } from 'next'
-import { Flag } from 'lucide-react'
-import { Badge, JoinCta, MediaImage, OrSupply, PageHero, SectionHead, Supply, TextLink } from '@/components/Basics'
-import { StaffCard } from '@/components/Player'
-import { asMedia } from '@/lib/media'
+import { Icon, type IconName } from '@/components/kit/Icon'
+import { Reveal } from '@/components/kit/motion'
+import { Timeline } from '@/components/kit/widgets'
+import { JoinBand, PageHero, Ph, PlayerCard, Sec, SectionHead } from '@/components/kit/ui'
+import { CLUB_NAME } from '@/lib/constants'
 import { getSiteSettings, getStaff } from '@/lib/queries'
+import { imageOf, staffVM, supply } from '@/lib/view'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
   title: 'About the club',
-  description: 'The story of Xtreme FC: who we are, our values, our coaching staff and our history.',
+  description: `Who ${CLUB_NAME} are, what the club stands for, and the people behind it.`,
   alternates: { canonical: '/about' },
 }
 
+const VALUE_ICONS: IconName[] = ['target', 'zap', 'users', 'shield', 'flag']
+const PLACEHOLDER_VALUES = ['value one', 'value two', 'value three'].map((t) => ({
+  title: `[CLUB TO SUPPLY: ${t}]`,
+  text: 'One sentence on what this value means on the pitch.',
+}))
+
+const PLACEHOLDER_TIMELINE = [
+  { year: '[Year]', title: 'Club founded', text: '[CLUB TO SUPPLY: founding story]' },
+  { year: '[Year]', title: 'First competitive season', text: '[CLUB TO SUPPLY]' },
+  { year: '[Year]', title: 'Verified achievement', text: '[CLUB TO SUPPLY: only verifiable entries]' },
+]
+
 export default async function AboutPage() {
-  const [settings, staff] = await Promise.all([getSiteSettings(), getStaff()])
-  const values = settings?.values ?? []
-  const timeline = settings?.timeline ?? []
-  const storyImage = asMedia(settings?.storyImage)
+  const [s, staff] = await Promise.all([getSiteSettings(), getStaff()])
+  const values = s?.values?.length ? s.values.map((v) => ({ title: v.title, text: v.text || '' })) : PLACEHOLDER_VALUES
+  const crew = (staff ?? []).map(staffVM)
+  const timeline = s?.timeline?.length
+    ? s.timeline.map((t) => ({ year: t.year, title: t.title, text: t.text || '' }))
+    : PLACEHOLDER_TIMELINE
+  const facts: [string, string][] = [
+    ['Founded', supply(s?.foundingYear)],
+    ['Home ground', supply(s?.homeGround)],
+    ['City', supply(s?.city)],
+  ]
 
   return (
-    <>
-      <PageHero title="About the club" />
-
-      <section className="section" aria-labelledby="story-title">
-        <div className="container split split--reverse">
-          <div className="article-cover clip" style={{ margin: 0 }}>
-            {storyImage ? (
-              <MediaImage media={storyImage} sizes="(min-width: 1024px) 40vw, 100vw" />
-            ) : (
-              <div className="media-placeholder" aria-hidden="true">
-                <Badge size={120} />
-              </div>
-            )}
-          </div>
-          <div className="stack">
-            <span className="eyebrow eyebrow--rule">Our story</span>
-            <h2 id="story-title" className="t-h2">
-              Xtreme FC
-            </h2>
-            <p className="t-lead measure" style={{ whiteSpace: 'pre-line', color: 'var(--color-text-primary)' }}>
-              <OrSupply value={settings?.clubStory} what="club story (200 words max)" />
+    <div>
+      <PageHero
+        title="About the club"
+        desc={`Who ${CLUB_NAME} are, what the club stands for, and the people behind it.`}
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'About' }]}
+      />
+      <Sec>
+        <div className="split rev">
+          <Reveal>
+            <Ph ratio="4/5" clip="lg" label="Club photo" image={imageOf(s?.storyImage, 'large')} />
+          </Reveal>
+          <div>
+            <SectionHead eyebrow="Our story" title="Where we come from" />
+            <p className="body-l" style={{ whiteSpace: 'pre-line' }}>
+              {s?.clubStory || '[CLUB TO SUPPLY: club story, max 200 words.]'}
             </p>
-            <dl className="meta-row t-small" style={{ margin: 0 }}>
-              <div>
-                <dt className="t-caption">Founded</dt>
-                <dd style={{ margin: 0 }}>
-                  <OrSupply value={settings?.foundingYear} what="founding year" />
-                </dd>
-              </div>
-              <div>
-                <dt className="t-caption">Home ground</dt>
-                <dd style={{ margin: 0 }}>
-                  <OrSupply value={settings?.homeGround} what="home ground" />
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-      </section>
-
-      <section className="section section--alt" aria-labelledby="values-title">
-        <div className="container">
-          <SectionHead eyebrow="What we stand for" title="Our values" id="values-title" />
-          {values.length ? (
-            <ul role="list" className="grid-3 values-grid">
-              {values.map((v) => (
-                <li key={v.id ?? v.title} className="card clip">
-                  <Flag size={24} aria-hidden="true" />
-                  <h3 className="t-h4">{v.title}</h3>
-                  {v.text && <p className="t-small t-secondary">{v.text}</p>}
-                </li>
+            <div className="kfacts">
+              {facts.map(([l, v], i) => (
+                <Reveal i={i} key={l} className="kf">
+                  <div className="fact-l">{l}</div>
+                  <div className="fact-v">{v}</div>
+                </Reveal>
               ))}
-            </ul>
-          ) : (
-            <p>
-              <Supply what="3–5 club values" />
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="section" aria-labelledby="badge-title">
-        <div className="container badge-meaning">
-          <Badge size={160} alt="Xtreme FC badge" />
-          <div className="stack">
-            <h2 id="badge-title" className="t-h3">
-              Our badge
-            </h2>
-            <p className="measure t-secondary" style={{ whiteSpace: 'pre-line' }}>
-              <OrSupply value={settings?.badgeMeaning} what="meaning of the badge and colours" />
-            </p>
+            </div>
           </div>
         </div>
-      </section>
+      </Sec>
 
-      {staff && staff.length > 0 && (
-        <section className="section section--alt" aria-labelledby="staff-title">
-          <div className="container">
-            <SectionHead eyebrow="The people" title="Coaching & management" id="staff-title" />
-            <ul role="list" className="player-grid">
-              {staff.map((s) => (
-                <li key={s.id}>
-                  <StaffCard person={s} />
-                </li>
-              ))}
-            </ul>
+      <Sec alt>
+        <SectionHead eyebrow="Values" title="What we stand for" />
+        <div className="grid-3">
+          {values.map((v, i) => (
+            <Reveal i={i} key={v.title + i} className="place">
+              <Icon name={VALUE_ICONS[i % VALUE_ICONS.length]} size={24} color="var(--color-primary-ink)" />
+              <h3 className="h4">{v.title}</h3>
+              {v.text && <p>{v.text}</p>}
+            </Reveal>
+          ))}
+        </div>
+      </Sec>
+
+      <Sec>
+        <div className="badge-mean">
+          <Reveal className="bm-badge">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/emblem-160.webp" alt={`${CLUB_NAME} badge`} width={160} height={160} />
+          </Reveal>
+          <div>
+            <SectionHead eyebrow="The badge" title="Neon on black" />
+            <p className="body-l">{s?.badgeMeaning || '[CLUB TO SUPPLY: meaning of the mascot and colours.]'}</p>
           </div>
-        </section>
+        </div>
+      </Sec>
+
+      {crew.length > 0 && (
+        <Sec alt>
+          <SectionHead eyebrow="Staff" title="Coaching and management" />
+          <div className="grid-squad">
+            {crew.map((c, i) => (
+              <Reveal i={i} key={c.id}>
+                <PlayerCard variant="staff" name={c.name} position={c.role} photo={c.photo} />
+              </Reveal>
+            ))}
+          </div>
+        </Sec>
       )}
 
-      {timeline.length > 0 && (
-        <section className="section" aria-labelledby="history-title">
-          <div className="container container--text">
-            <SectionHead eyebrow="History" title="History & achievements" id="history-title" />
-            <ol role="list" className="timeline">
-              {timeline.map((t) => (
-                <li key={t.id ?? `${t.year}-${t.title}`}>
-                  <div className="timeline__year">{t.year}</div>
-                  <h3 className="t-h4" style={{ marginTop: 8 }}>
-                    {t.title}
-                  </h3>
-                  {t.text && <p className="t-small t-secondary">{t.text}</p>}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-      )}
+      <Sec>
+        <SectionHead eyebrow="History" title="Club timeline" />
+        <Timeline entries={timeline} />
+      </Sec>
 
-      <div className="container" style={{ paddingBottom: 48 }}>
-        <TextLink href="/contact">Contact the club</TextLink>
-      </div>
-      <JoinCta text={settings?.joinCtaText} />
-    </>
+      <JoinBand text={s?.joinCtaText} />
+    </div>
   )
 }

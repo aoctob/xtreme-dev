@@ -79,6 +79,7 @@ export const Applications: CollectionConfig = {
       ],
     },
     { name: 'isMinor', type: 'checkbox', admin: { ...readOnly, position: 'sidebar' } },
+    { name: 'guardianConsent', type: 'checkbox', admin: { ...readOnly, position: 'sidebar' } },
     { name: 'consent', type: 'checkbox', required: true, admin: { ...readOnly, position: 'sidebar' } },
     { name: 'notes', type: 'textarea', admin: { description: 'Internal notes (not shared with the applicant).' } },
     fingerprint,

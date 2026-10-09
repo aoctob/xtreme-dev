@@ -13,15 +13,15 @@ export const Matches: CollectionConfig = {
     defaultColumns: ['opponentName', 'kickoffUtc', 'competition', 'status', 'scoreFor', 'scoreAgainst'],
     description: 'Fixtures and results. Times are entered in your local time and shown on the site in IST.',
     preview: (doc) =>
-      doc?.slug ? `/preview?path=${encodeURIComponent(`/fixtures/${doc.slug}`)}` : null,
+      doc?.slug ? `/preview?path=${encodeURIComponent(`/results/${doc.slug}`)}` : null,
   },
   access: { read: publishedOrStaff, create: staff, update: staff, delete: staff },
   defaultSort: '-kickoffUtc',
   versions: { drafts: true, maxPerDoc: 20 },
   hooks: revalidateCollection<{ slug?: string | null }>((doc) => [
     '/',
-    '/fixtures',
-    `/fixtures/${doc.slug}`,
+    '/results',
+    `/results/${doc.slug}`,
   ]),
   fields: [
     {
@@ -82,7 +82,7 @@ export const Matches: CollectionConfig = {
       fields: [
         {
           name: 'scoreFor',
-          label: 'Xtreme FC score',
+          label: 'Our score',
           type: 'number',
           min: 0,
           admin: { condition: (_, s) => s?.status === 'fulltime' || s?.status === 'live' },
@@ -99,7 +99,7 @@ export const Matches: CollectionConfig = {
     {
       name: 'scorers',
       type: 'array',
-      admin: { description: 'Only if known. Leave empty to hide.' },
+      admin: { description: 'Goals with the minute, if known. Shown as the match timeline. Leave empty to hide.' },
       fields: [
         {
           type: 'row',
@@ -111,7 +111,7 @@ export const Matches: CollectionConfig = {
               type: 'select',
               defaultValue: 'us',
               options: [
-                { label: 'Xtreme FC', value: 'us' },
+                { label: 'Our club', value: 'us' },
                 { label: 'Opponent', value: 'them' },
               ],
             },

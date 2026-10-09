@@ -19,8 +19,7 @@ export const Sponsors: CollectionConfig = {
       name: 'logo',
       type: 'upload',
       relationTo: 'media',
-      required: true,
-      admin: { description: 'SVG preferred; PNG at least 600 px wide.' },
+      admin: { description: 'SVG preferred; PNG at least 600 px wide. Without a logo the name is shown.' },
     },
     {
       name: 'logoOnWhite',

@@ -14,6 +14,7 @@ import { Players } from './collections/Players'
 import { Posts } from './collections/Posts'
 import { Sponsors } from './collections/Sponsors'
 import { Staff } from './collections/Staff'
+import { Registrations, RegistrationPhotos } from './collections/Registrations'
 import { Applications, Enquiries, RateLimits } from './collections/Submissions'
 import { Users } from './collections/Users'
 import { JoinPage } from './globals/JoinPage'
@@ -25,7 +26,7 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     user: Users.slug,
-    meta: { titleSuffix: ' · Xtreme FC admin' },
+    meta: { titleSuffix: ' · XTREME CLUB admin' },
     importMap: { baseDir: path.resolve(dirname) },
   },
   collections: [
@@ -36,6 +37,8 @@ export default buildConfig({
     Posts,
     Media,
     Applications,
+    Registrations,
+    RegistrationPhotos,
     Enquiries,
     Users,
     RateLimits,
@@ -56,7 +59,7 @@ export default buildConfig({
         email: resendAdapter({
           apiKey: process.env.RESEND_API_KEY,
           defaultFromAddress: process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
-          defaultFromName: 'Xtreme FC website',
+          defaultFromName: 'XTREME CLUB website',
         }),
       }
     : {}),
@@ -70,12 +73,15 @@ export default buildConfig({
       collections: {
         // Serve files from the Blob CDN directly instead of through a function (keeps Hobby usage low).
         media: { disablePayloadAccessControl: true },
+        // Registration photos keep access control: only signed-in staff can open them.
+        'registration-photos': true,
       },
     }),
     importExportPlugin({
       collections: [
         { slug: 'applications', import: false },
         { slug: 'enquiries', import: false },
+        { slug: 'registrations', import: false },
       ],
     }),
   ],

@@ -74,6 +74,8 @@ export interface Config {
     posts: Post;
     media: Media;
     applications: Application;
+    registrations: Registration;
+    'registration-photos': RegistrationPhoto;
     enquiries: Enquiry;
     users: User;
     'rate-limits': RateLimit;
@@ -94,6 +96,8 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
+    registrations: RegistrationsSelect<false> | RegistrationsSelect<true>;
+    'registration-photos': RegistrationPhotosSelect<false> | RegistrationPhotosSelect<true>;
     enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
@@ -181,7 +185,7 @@ export interface Match {
   scoreFor?: number | null;
   scoreAgainst?: number | null;
   /**
-   * Only if known. Leave empty to hide.
+   * Goals with the minute, if known. Shown as the match timeline. Leave empty to hide.
    */
   scorers?:
     | {
@@ -320,6 +324,15 @@ export interface Player {
    */
   slug?: string | null;
   /**
+   * Guest players featured in selected tournaments without joining the permanent squad.
+   */
+  squadRole: 'squad' | 'guest';
+  guestAppearances?: number | null;
+  /**
+   * e.g. "Winter Cup 2026"
+   */
+  guestEvent?: string | null;
+  /**
    * Tick only when the club holds written consent to publish this player (parent/guardian consent for under-18s). A photo cannot be added until this is ticked.
    */
   consentOnFile?: boolean | null;
@@ -388,9 +401,9 @@ export interface Sponsor {
   id: number;
   name: string;
   /**
-   * SVG preferred; PNG at least 600 px wide.
+   * SVG preferred; PNG at least 600 px wide. Without a logo the name is shown.
    */
-  logo: number | Media;
+  logo?: (number | null) | Media;
   /**
    * Tick if the logo only works on a white background.
    */
@@ -424,7 +437,7 @@ export interface Application {
   dateOfBirth: string;
   phone: string;
   email?: string | null;
-  preferredPosition?: ('gk' | 'defender' | 'midfielder' | 'forward' | 'not-sure') | null;
+  preferredPosition?: ('not-sure' | 'gk' | 'defender' | 'midfielder' | 'forward') | null;
   experienceLevel?: ('beginner' | 'club' | 'academy-state' | 'other') | null;
   previousClub?: string | null;
   preferredTrialDate?: string | null;
@@ -437,6 +450,7 @@ export interface Application {
     phone?: string | null;
   };
   isMinor?: boolean | null;
+  guardianConsent?: boolean | null;
   consent: boolean;
   /**
    * Internal notes (not shared with the applicant).
@@ -445,6 +459,89 @@ export interface Application {
   fingerprint?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Season registrations from the Register page. Medical and emergency details are private: share only with coaches and first-aid staff.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "registrations".
+ */
+export interface Registration {
+  id: number;
+  status: 'new' | 'approved' | 'needs-info' | 'declined';
+  mode: 'player' | 'committee';
+  registeredBy?: {
+    name?: string | null;
+    role?: ('secretary' | 'coach' | 'team-manager' | 'treasurer' | 'other') | null;
+    phone?: string | null;
+  };
+  fullName: string;
+  dateOfBirth: string;
+  phone?: string | null;
+  email?: string | null;
+  address: string;
+  photo?: (number | null) | RegistrationPhoto;
+  guardian?: {
+    name?: string | null;
+    phone?: string | null;
+  };
+  team?: ('unassigned' | 'senior' | 'youth') | null;
+  foot?: ('right' | 'left' | 'both') | null;
+  position?: ('not-sure' | 'gk' | 'defender' | 'midfielder' | 'forward') | null;
+  secondPosition?: ('gk' | 'defender' | 'midfielder' | 'forward') | null;
+  shirtNumber?: number | null;
+  previousClub?: string | null;
+  emergency?: {
+    name?: string | null;
+    relationship?: string | null;
+    phone?: string | null;
+  };
+  medical?: string | null;
+  isMinor?: boolean | null;
+  guardianConsent?: boolean | null;
+  /**
+   * Committee member confirmed the player or guardian agreed.
+   */
+  committeeConfirmed?: boolean | null;
+  consent: boolean;
+  /**
+   * Internal notes.
+   */
+  notes?: string | null;
+  fingerprint?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "registration-photos".
+ */
+export interface RegistrationPhoto {
+  id: number;
+  alt?: string | null;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumb?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * Messages from the Contact and Sponsors pages.
@@ -730,6 +827,14 @@ export interface PayloadLockedDocument {
         value: number | Application;
       } | null)
     | ({
+        relationTo: 'registrations';
+        value: number | Registration;
+      } | null)
+    | ({
+        relationTo: 'registration-photos';
+        value: number | RegistrationPhoto;
+      } | null)
+    | ({
         relationTo: 'enquiries';
         value: number | Enquiry;
       } | null)
@@ -822,6 +927,9 @@ export interface PlayersSelect<T extends boolean = true> {
   shirtNumber?: T;
   position?: T;
   slug?: T;
+  squadRole?: T;
+  guestAppearances?: T;
+  guestEvent?: T;
   consentOnFile?: T;
   photo?: T;
   bio?: T;
@@ -969,11 +1077,95 @@ export interface ApplicationsSelect<T extends boolean = true> {
         phone?: T;
       };
   isMinor?: T;
+  guardianConsent?: T;
   consent?: T;
   notes?: T;
   fingerprint?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "registrations_select".
+ */
+export interface RegistrationsSelect<T extends boolean = true> {
+  status?: T;
+  mode?: T;
+  registeredBy?:
+    | T
+    | {
+        name?: T;
+        role?: T;
+        phone?: T;
+      };
+  fullName?: T;
+  dateOfBirth?: T;
+  phone?: T;
+  email?: T;
+  address?: T;
+  photo?: T;
+  guardian?:
+    | T
+    | {
+        name?: T;
+        phone?: T;
+      };
+  team?: T;
+  foot?: T;
+  position?: T;
+  secondPosition?: T;
+  shirtNumber?: T;
+  previousClub?: T;
+  emergency?:
+    | T
+    | {
+        name?: T;
+        relationship?: T;
+        phone?: T;
+      };
+  medical?: T;
+  isMinor?: T;
+  guardianConsent?: T;
+  committeeConfirmed?: T;
+  consent?: T;
+  notes?: T;
+  fingerprint?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "registration-photos_select".
+ */
+export interface RegistrationPhotosSelect<T extends boolean = true> {
+  alt?: T;
+  prefix?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumb?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1163,6 +1355,10 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface SiteSetting {
   id: number;
   /**
+   * Thin bar above the header, e.g. "Season trials are open." Leave empty to hide it.
+   */
+  announcement?: string | null;
+  /**
    * Short eyebrow line above the headline.
    */
   tagline?: string | null;
@@ -1194,6 +1390,7 @@ export interface SiteSetting {
   storyImage?: (number | null) | Media;
   foundingYear?: number | null;
   homeGround?: string | null;
+  city?: string | null;
   values?:
     | {
         title: string;
@@ -1246,9 +1443,18 @@ export interface SiteSetting {
    */
   notificationEmail?: string | null;
   /**
-   * "Why partner with Xtreme FC". No numbers that cannot be verified.
+   * Optional intro under "Why partner with the club".
    */
   sponsorPitch?: string | null;
+  /**
+   * Three short, verifiable audience facts. Do not publish numbers that cannot be verified.
+   */
+  partnerReasons?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
   placementOptions?:
     | {
         title: string;
@@ -1318,6 +1524,7 @@ export interface JoinPage {
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
+  announcement?: T;
   tagline?: T;
   heroHeadline?: T;
   heroLead?: T;
@@ -1329,6 +1536,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   storyImage?: T;
   foundingYear?: T;
   homeGround?: T;
+  city?: T;
   values?:
     | T
     | {
@@ -1360,6 +1568,12 @@ export interface SiteSettingsSelect<T extends boolean = true> {
       };
   notificationEmail?: T;
   sponsorPitch?: T;
+  partnerReasons?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
   placementOptions?:
     | T
     | {
@@ -1431,6 +1645,8 @@ export interface TaskCreateCollectionExport {
       | 'posts'
       | 'media'
       | 'applications'
+      | 'registrations'
+      | 'registration-photos'
       | 'enquiries'
       | 'users'
       | 'rate-limits'

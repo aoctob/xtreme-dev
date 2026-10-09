@@ -1,6 +1,7 @@
 /** Shared option lists used by both Payload collections and the public site. */
 
-export const CLUB_NAME = 'Xtreme FC'
+/** Display name, as in the design kit. Change here if the club settles on another name. */
+export const CLUB_NAME = 'XTREME CLUB'
 export const TIME_ZONE = 'Asia/Kolkata'
 
 export const POSITIONS = [
@@ -46,17 +47,17 @@ export const ENQUIRY_STATUSES = [
 ] as const
 
 export const PREFERRED_POSITIONS = [
-  { label: 'Goalkeeper', value: 'gk' },
+  { label: 'Not sure', value: 'not-sure' },
+  { label: 'GK', value: 'gk' },
   { label: 'Defender', value: 'defender' },
   { label: 'Midfielder', value: 'midfielder' },
   { label: 'Forward', value: 'forward' },
-  { label: 'Not sure', value: 'not-sure' },
 ] as const
 
 export const EXPERIENCE_LEVELS = [
   { label: 'Beginner', value: 'beginner' },
   { label: 'Club level', value: 'club' },
-  { label: 'Academy / State level', value: 'academy-state' },
+  { label: 'Academy/State level', value: 'academy-state' },
   { label: 'Other', value: 'other' },
 ] as const
 
@@ -87,3 +88,43 @@ export const labelFor = <T extends readonly { label: string; value: string }[]>(
   list: T,
   value: string | null | undefined,
 ): string => list.find((o) => o.value === value)?.label ?? ''
+
+/** Squad page sections: permanent players and guest players who featured in tournaments. */
+export const SQUAD_ROLES = [
+  { label: 'Squad player', value: 'squad' },
+  { label: 'Guest player', value: 'guest' },
+] as const
+
+/* ------------------------------ Player registration ----------------------------- */
+
+export const REGISTRATION_MODES = [
+  { label: 'The player (self-registration)', value: 'player' },
+  { label: 'Committee member', value: 'committee' },
+] as const
+
+export const COMMITTEE_ROLES = [
+  { label: 'Secretary', value: 'secretary' },
+  { label: 'Coach', value: 'coach' },
+  { label: 'Team manager', value: 'team-manager' },
+  { label: 'Treasurer', value: 'treasurer' },
+  { label: 'Other committee member', value: 'other' },
+] as const
+
+export const TEAMS = [
+  { label: 'Not assigned yet', value: 'unassigned' },
+  { label: 'Senior team', value: 'senior' },
+  { label: 'Youth team', value: 'youth' },
+] as const
+
+export const FEET = [
+  { label: 'Right', value: 'right' },
+  { label: 'Left', value: 'left' },
+  { label: 'Both', value: 'both' },
+] as const
+
+export const REGISTRATION_STATUSES = [
+  { label: 'New', value: 'new' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Needs more info', value: 'needs-info' },
+  { label: 'Declined', value: 'declined' },
+] as const

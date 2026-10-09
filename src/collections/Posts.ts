@@ -11,18 +11,11 @@ export const Posts: CollectionConfig = {
     useAsTitle: 'title',
     group: 'Content',
     defaultColumns: ['title', 'category', 'publishedAt', '_status'],
-    preview: (doc) =>
-      doc?.slug ? `/preview?path=${encodeURIComponent(`/news/${doc.slug}`)}` : null,
   },
   access: { read: publishedOrStaff, create: staff, update: staff, delete: staff },
   defaultSort: '-publishedAt',
   versions: { drafts: true, maxPerDoc: 20 },
-  hooks: revalidateCollection<{ slug?: string | null }>((doc) => [
-    '/',
-    '/news',
-    `/news/${doc.slug}`,
-    '/fixtures',
-  ]),
+  hooks: revalidateCollection(() => ['/results']),
   fields: [
     { name: 'title', type: 'text', required: true, maxLength: 120 },
     slugField((d) => d.title as string | undefined),

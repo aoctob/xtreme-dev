@@ -26,7 +26,7 @@ export type Side = {
 
 /** Home team first, as on any fixture list. */
 export function sides(m: Match): [Side, Side] {
-  const us: Side = { name: CLUB_NAME, isUs: true, crestUrl: '/brand/badge-240.webp', score: hasScore(m) ? (m.scoreFor ?? null) : null }
+  const us: Side = { name: CLUB_NAME, isUs: true, crestUrl: '/brand/emblem-160.webp', score: hasScore(m) ? (m.scoreFor ?? null) : null }
   const them: Side = {
     name: m.opponentName,
     isUs: false,
@@ -53,5 +53,14 @@ export const matchTitle = (m: Match) => {
   const [home, away] = sides(m)
   return hasScore(m)
     ? `${home.name} ${home.score}–${away.score} ${away.name}`
-    : `${home.name} vs ${away.name}`
+    : `${home.name} v ${away.name}`
+}
+
+/** "XTREME CLUB v Rivals FC" */
+export const fixtureTitle = (m: Match) => sides(m).map((s) => s.name).join(' v ')
+
+/** Score as the kit prints it, home first: "2 – 1". */
+export const scoreLine = (m: Match) => {
+  const [home, away] = sides(m)
+  return `${home.score ?? 0} – ${away.score ?? 0}`
 }

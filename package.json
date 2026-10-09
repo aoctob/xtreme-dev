@@ -14,7 +14,8 @@
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
-    "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate"
+    "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
+    "seed:demo": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/demo.ts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5",

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
-import { OrSupply, PageHero } from '@/components/Basics'
+import { PageHero } from '@/components/kit/ui'
+import { PrivacyToc } from '@/components/kit/widgets'
+import { CLUB_NAME } from '@/lib/constants'
 import { formatLongDate } from '@/lib/format'
 import { getSiteSettings } from '@/lib/queries'
 
@@ -7,110 +9,76 @@ export const revalidate = 600
 
 export const metadata: Metadata = {
   title: 'Privacy policy',
-  description: 'How Xtreme FC collects, uses and protects personal data, including data about children.',
+  description: `How ${CLUB_NAME} collects, uses and protects personal data, including data about children.`,
   alternates: { canonical: '/privacy' },
 }
 
-const SECTIONS = [
-  { id: 'what', title: 'What we collect' },
-  { id: 'why', title: 'Why we collect it' },
-  { id: 'who', title: 'Who sees it' },
-  { id: 'keep', title: 'How long we keep it' },
-  { id: 'children', title: "Children's data" },
-  { id: 'rights', title: 'Your rights and deletion' },
-  { id: 'analytics', title: 'Analytics and cookies' },
-  { id: 'contact', title: 'Contact for privacy requests' },
-]
-
 /**
- * Plain-language policy skeleton (PRD §D.14). Must be reviewed by a lawyer against
- * India's Digital Personal Data Protection Act, 2023 before launch.
+ * Plain-language policy (kit-media.jsx Privacy, PRD §D.14). Must be reviewed by a lawyer
+ * against India's Digital Personal Data Protection Act, 2023 before launch.
  */
 export default async function PrivacyPage() {
   const s = await getSiteSettings()
+  const sections: { id: string; title: string; text: string }[] = [
+    {
+      id: 'what',
+      title: 'What we collect',
+      text:
+        'The details you enter in our forms: name, date of birth, phone number, email and your message. For applicants under 18, the parent or guardian’s name and phone number. Player registration also asks for a home address, an emergency contact, optional medical notes and an optional photo. We also count page visits without cookies.',
+    },
+    {
+      id: 'why',
+      title: 'Why we collect it',
+      text: 'To arrange trials, register players, answer enquiries and run the club. We do not sell your data or use it for advertising.',
+    },
+    {
+      id: 'who',
+      title: 'Who sees it',
+      text:
+        'Only named club staff [CLUB TO SUPPLY: roles] with an admin account. Medical and emergency details are shared only with coaches and first-aid staff. Our hosting and email providers process the data on our behalf.',
+    },
+    {
+      id: 'keep',
+      title: 'How long we keep it',
+      text: s?.retentionPeriod ? `We keep form submissions for ${s.retentionPeriod}, then delete them.` : '[CLUB TO DECIDE: retention period.]',
+    },
+    {
+      id: 'children',
+      title: 'Children’s data',
+      text:
+        'We collect the minimum needed for applicants under 18, require a parent or guardian’s consent, and contact the guardian rather than the child. We never publish a minor’s contact details, school or home area.',
+    },
+    {
+      id: 'rights',
+      title: 'Your rights',
+      text: 'You can ask to see, correct or delete your data at any time. We reply within [CLUB TO DECIDE] days.',
+    },
+    {
+      id: 'contact',
+      title: 'Contact for privacy requests',
+      text: s?.privacyContact || s?.email || '[CLUB TO SUPPLY: email for privacy requests.]',
+    },
+  ]
+  const desc =
+    'Draft for legal review under India’s Digital Personal Data Protection Act, 2023.' +
+    (s?.privacyLastUpdated ? ` Last updated ${formatLongDate(s.privacyLastUpdated)}.` : '')
+
   return (
-    <>
-      <PageHero
-        title="Privacy policy"
-        description={
-          s?.privacyLastUpdated ? `Last updated ${formatLongDate(s.privacyLastUpdated)}.` : undefined
-        }
-      />
-      <section className="section">
-        <div className="container container--text prose">
-          <p className="placeholder" role="note">
-            Draft for legal review. This page must be reviewed against India&apos;s Digital Personal Data
-            Protection Act, 2023 before the site launches.
-          </p>
-          <nav aria-label="On this page">
-            <ul>
-              {SECTIONS.map((x) => (
-                <li key={x.id}>
-                  <a href={`#${x.id}`}>{x.title}</a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <h2 id="what">What we collect</h2>
-          <p>
-            When you use a form on this site we collect only what the form asks for. The trial
-            application asks for your name, date of birth, phone number, and optionally your email,
-            position, experience, previous club and a message. For applicants under 18 we also ask for
-            a parent or guardian&apos;s name and phone number. The contact and sponsorship forms ask for
-            your name, how to reach you, and your message.
-          </p>
-          <p>
-            To protect the forms from abuse we store a scrambled (hashed) version of your connection&apos;s
-            IP address for up to 24 hours. We cannot turn it back into the IP address.
-          </p>
-
-          <h2 id="why">Why we collect it</h2>
-          <p>
-            We use your details only to reply to you, arrange trials, and manage the club. We do not sell
-            your data or use it for advertising.
-          </p>
-
-          <h2 id="who">Who sees it</h2>
-          <p>
-            Only named club staff with an admin account can see form submissions. Submissions are stored
-            in an encrypted database (Neon Postgres) and are never published on the website. A
-            notification email is sent to the club inbox when a form is submitted.
-          </p>
-
-          <h2 id="keep">How long we keep it</h2>
-          <p>
-            We keep form submissions for <OrSupply value={s?.retentionPeriod} what="retention period (club to decide)" />,
-            then delete them.
-          </p>
-
-          <h2 id="children">Children&apos;s data</h2>
-          <p>
-            For applicants under 18 we need a parent or guardian&apos;s consent, and the club contacts the
-            parent or guardian rather than the child. We never publish a minor&apos;s contact details, school
-            or home area. Photos of players under 18 are published only with written consent from a parent
-            or guardian, held by the club.
-          </p>
-
-          <h2 id="rights">Your rights and deletion</h2>
-          <p>
-            You can ask to see, correct or delete the personal data we hold about you. Contact us using
-            the details below and we will act on your request. Deleting a record removes it from our
-            database.
-          </p>
-
-          <h2 id="analytics">Analytics and cookies</h2>
-          <p>
-            We measure visits with privacy-friendly analytics that do not use cookies and do not collect
-            names, phone numbers or email addresses. The site does not use advertising trackers.
-          </p>
-
-          <h2 id="contact">Contact for privacy requests</h2>
-          <p>
-            <OrSupply value={s?.privacyContact || s?.email} what="privacy contact email or phone" />
-          </p>
+    <div>
+      <PageHero title="Privacy policy" desc={desc} crumbs={[{ label: 'Home', href: '/' }, { label: 'Privacy' }]} />
+      <section className="sec">
+        <div className="wrap priv">
+          <div className="priv-body">
+            {sections.map(({ id, title, text }) => (
+              <section key={id} id={'pv-' + id} className="priv-s">
+                <h2 className="h3">{title}</h2>
+                <p>{text}</p>
+              </section>
+            ))}
+          </div>
+          <PrivacyToc sections={sections.map(({ id, title }) => ({ id, title }))} />
         </div>
       </section>
-    </>
+    </div>
   )
 }

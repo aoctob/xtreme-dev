@@ -17,6 +17,11 @@ export const SiteSettings: GlobalConfig = {
         {
           label: 'Home',
           fields: [
+            {
+              name: 'announcement',
+              type: 'text',
+              admin: { description: 'Thin bar above the header, e.g. "Season trials are open." Leave empty to hide it.' },
+            },
             { name: 'tagline', type: 'text', admin: { description: 'Short eyebrow line above the headline.' } },
             { name: 'heroHeadline', type: 'text', maxLength: 60, admin: { description: '8 words or fewer.' } },
             { name: 'heroLead', type: 'textarea', maxLength: 200, admin: { description: '25 words or fewer.' } },
@@ -36,6 +41,7 @@ export const SiteSettings: GlobalConfig = {
               fields: [
                 { name: 'foundingYear', type: 'number' },
                 { name: 'homeGround', type: 'text' },
+                { name: 'city', type: 'text' },
               ],
             },
             {
@@ -103,7 +109,14 @@ export const SiteSettings: GlobalConfig = {
         {
           label: 'Sponsors',
           fields: [
-            { name: 'sponsorPitch', type: 'textarea', admin: { description: '"Why partner with Xtreme FC". No numbers that cannot be verified.' } },
+            { name: 'sponsorPitch', type: 'textarea', admin: { description: 'Optional intro under "Why partner with the club".' } },
+            {
+              name: 'partnerReasons',
+              type: 'array',
+              maxRows: 3,
+              admin: { description: 'Three short, verifiable audience facts. Do not publish numbers that cannot be verified.' },
+              fields: [{ name: 'text', type: 'textarea', required: true }],
+            },
             {
               name: 'placementOptions',
               type: 'array',

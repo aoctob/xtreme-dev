@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { anyone, staff } from '../access'
 import { slugField } from '../fields/slug'
 import { revalidateCollection } from '../hooks/revalidate'
-import { POSITIONS } from '../lib/constants'
+import { POSITIONS, SQUAD_ROLES } from '../lib/constants'
 
 export const Players: CollectionConfig = {
   slug: 'players',
@@ -33,6 +33,32 @@ export const Players: CollectionConfig = {
       ],
     },
     slugField((d) => d.fullName as string | undefined),
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'squadRole',
+          type: 'select',
+          required: true,
+          defaultValue: 'squad',
+          options: SQUAD_ROLES.map(({ label, value }) => ({ label, value })),
+          admin: {
+            description: 'Guest players featured in selected tournaments without joining the permanent squad.',
+          },
+        },
+        {
+          name: 'guestAppearances',
+          type: 'number',
+          min: 0,
+          admin: { condition: (_, s) => s?.squadRole === 'guest' },
+        },
+        {
+          name: 'guestEvent',
+          type: 'text',
+          admin: { condition: (_, s) => s?.squadRole === 'guest', description: 'e.g. "Winter Cup 2026"' },
+        },
+      ],
+    },
     {
       name: 'consentOnFile',
       type: 'checkbox',

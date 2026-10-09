@@ -1,21 +1,24 @@
-# Xtreme FC website
+# XTREME CLUB website
 
 One Next.js (App Router, TypeScript) app with Payload CMS v3 embedded. The public site and the
 admin panel (`/admin`) deploy together to Vercel's free Hobby plan, with content in Neon Postgres
-and uploads in Vercel Blob. Built from `docs/PRD_2.md` (v1.1) and `docs/design_1.md`.
+and uploads in Vercel Blob. The public pages are a 1:1 build of the Claude Design website kit
+(`ui_kits/website/index.html` in the design project, exported to `../design-import/`), on top of
+the requirements in `docs/PRD_2.md` (v1.1).
 
 ## What's inside
 
 | Area | Where |
 |------|-------|
-| Public pages (`/`, `/about`, `/squad`, `/squad/[slug]`, `/fixtures`, `/fixtures/[slug]`, `/news`, `/news/[slug]`, `/gallery`, `/join`, `/sponsors`, `/contact`, `/privacy`, 404, 500) | `src/app/(frontend)/` |
+| Public pages (`/`, `/squad`, `/squad/[slug]`, `/results`, `/results/[slug]`, `/gallery`, `/about`, `/sponsors`, `/contact`, `/join`, `/register`, `/privacy`, `/search`, 404, 500). Old `/fixtures` and `/news` links redirect. | `src/app/(frontend)/` |
 | Admin panel and Payload REST/GraphQL API | `src/app/(payload)/` |
-| Collections: `players`, `staff`, `matches`, `posts`, `media`, `sponsors`, `applications`, `enquiries`, `users` (+ hidden `rate-limits`) | `src/collections/` |
+| Collections: `players` (squad and guest players), `staff`, `matches`, `posts`, `media`, `sponsors`, `applications`, `registrations` (+ staff-only `registration-photos`), `enquiries`, `users` (+ hidden `rate-limits`) | `src/collections/` |
 | Globals: Site settings, Join page | `src/globals/` |
-| Form Server Action (validation, honeypot, 60 s de-dupe, Postgres rate limit 5/IP/hour, email) | `src/app/(frontend)/actions.ts`, `src/lib/validation.ts` |
+| Form Server Action for Join, Register, Sponsors and Contact (validation shared with the browser, honeypot, 60 s de-dupe, Postgres rate limit 5/IP/hour, email) | `src/app/(frontend)/actions.ts`, `src/lib/validation.ts` |
 | On-demand revalidation hooks | `src/hooks/revalidate.ts` |
-| Design tokens (CSS variables) and styles | `src/app/(frontend)/tokens.css`, `site.css` |
-| Components | `src/components/` |
+| Design tokens and kit styles (ported from the design project) | `src/app/(frontend)/kit.css`, `ds.css` |
+| Kit components (header, footer, cards, forms, gallery, motion) | `src/components/kit/` |
+| Demo content from the kit's sample data | `src/seed/demo.ts` |
 | SEO: metadata, `sitemap.xml`, `robots.txt`, `SportsTeam` / `SportsEvent` JSON-LD, share image | pages, `src/app/sitemap.ts`, `src/app/robots.ts`, `public/brand/` |
 | Security headers (CSP, HSTS, etc.) | `next.config.ts` |
 | Database migrations | `src/migrations/` |
@@ -56,6 +59,7 @@ Useful scripts:
 | `npm run migrate` | Apply migrations to the database in `DATABASE_URL` |
 | `npm run ci` | `payload migrate` then `next build` (Vercel's build command) |
 | `npm run generate:types` | Regenerate `src/payload-types.ts` after schema changes |
+| `npm run seed:demo` | Fill an empty database with the kit's sample players, matches, gallery and sponsors (`-- clear` removes them). Never run it on the live site once real content exists. |
 
 ## Changing the data model
 
@@ -94,35 +98,33 @@ All of these happen in `/admin`; the site updates within seconds, no deploy need
   enter both scores; optionally add scorers, link a match report and add photos.
 - **Add a player:** Club → Players → Create. Tick **Consent on file** before adding a photo
   (parent/guardian consent for under-18s). Tick **Featured** to show the player on the home page.
-- **Publish news:** Content → News → Create. Choose a category, add a cover image and body, then
-  Publish. Use **Preview** to check a draft first.
+  Set **Squad role** to *Guest player* for tournament guests; they appear under "Guest players".
+- **Player registrations:** Inbox → Player registrations. These hold addresses, emergency contacts
+  and medical notes, so share them only with coaches and first-aid staff.
 - **Gallery:** Content → Media → upload a photo, write the alt text, tick **Show in gallery** and
   set an album. For a video, choose type *Video*, upload the poster image and paste the link.
 - **Sponsors:** Club → Sponsors. A sponsor only appears when **Permission on file** is ticked.
 - **Club facts, contact details, socials, trial dates, FAQ:** Settings → Site settings and
   Settings → Join page. Set **Notification email** so new applications reach the club inbox.
-- **Inbox:** Inbox → Applications / Enquiries. Filter by status, update the status as you follow
+- **Inbox:** Inbox → Applications / Player registrations / Enquiries. Filter by status, update the status as you follow
   up, and use **Export** for the weekly CSV backup.
 
 ## Placeholders
 
 The PRD forbids invented club facts (constraint C2). Anything the club has not supplied shows as
-an orange `[CLUB TO SUPPLY: …]` marker on the page until it is filled in through the admin, and
-sections with no data (results, news, gallery, sponsors, history, stats) are hidden. Launch
-criterion H.5 #2 is met when no orange marker remains. The privacy policy at `/privacy` is a
+a `[CLUB TO SUPPLY: …]` marker on the page, as in the design kit, until it is filled in through
+the admin. Sections with no data (results, gallery, sponsors, stats) are hidden or show the kit's
+empty state. Launch criterion H.5 #2 is met when no marker remains. The privacy policy at `/privacy` is a
 plain-language draft that **must be legally reviewed** (India DPDP Act, 2023) before launch.
 
 ## Design source
 
-Tokens and components are ported from `docs/design_1.md` (colour tokens §B.5, type scale §C.2,
-spacing and clipped corners §D, components §E, motion §G) into CSS variables in `tokens.css`.
-Fonts are self-hosted Archivo (width axis) and Inter, Latin subset. The badge in `public/brand/`
-was generated from `docs/xfc-logo.jpeg`; replace it with the club's vector file when supplied
-(design.md §A.6). The Claude Design project was not imported in this pass; see the note in the
-project thread.
+The public site follows the Claude Design project's website kit screen by screen: tokens from
+`tokens/*.css`, page styles from `ui_kits/website/index.html`, components from `components/` and
+page structure and copy from `ui_kits/website/kit-*.jsx`. The kit's prototype-only tools (tweaks
+panel, user-flow guide) are not part of the site. The club name shown on the site is the
+`CLUB_NAME` constant in `src/lib/constants.ts` ("XTREME CLUB", as in the kit), and the badge in
+`public/brand/` is the kit's emblem. Fonts are self-hosted Archivo and Inter.
 
-## Not included yet
-
-- Email delivery needs a Resend key (otherwise notifications are logged to the server console).
-- CAPTCHA (Turnstile) is not added; the PRD asks for it only if spam appears.
-- Automated axe/Lighthouse CI is not set up.
+The site has no News pages because the kit has none; the News collection is kept in the admin
+for match reports and can be removed later.

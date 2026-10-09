@@ -1,276 +1,203 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CalendarX2 } from 'lucide-react'
-import {
-  Badge,
-  EmptyState,
-  JoinCta,
-  JsonLd,
-  MediaImage,
-  OrSupply,
-  SectionHead,
-  Supply,
-  TextLink,
-} from '@/components/Basics'
-import { Gallery } from '@/components/Gallery'
-import { MatchCard, Scoreboard } from '@/components/Match'
-import { NewsCard } from '@/components/News'
-import { PlayerCard } from '@/components/Player'
-import { SponsorGrid } from '@/components/Sponsors'
-import { SocialIcon } from '@/components/SocialIcon'
-import { toGalleryItems } from '@/lib/gallery'
-import { absoluteUrl, asMedia } from '@/lib/media'
-import {
-  getFeaturedPlayers,
-  getGallery,
-  getLatestPosts,
-  getResults,
-  getSiteSettings,
-  getSponsors,
-  getUpcomingMatches,
-} from '@/lib/queries'
-
-export const revalidate = 600
+import { TileGrid } from '@/components/kit/gallery'
+import { MatchStrip, PlayerRow } from '@/components/kit/live'
+import { Reveal } from '@/components/kit/motion'
+import { Badge, Button, ErrorState, JoinBand, Ph, Sec, SectionHead, SponsorLogo } from '@/components/kit/ui'
+import { CLUB_NAME } from '@/lib/constants'
+import { formatDay } from '@/lib/format'
+import { absoluteUrl } from '@/lib/media'
+import { getFeaturedPlayers, getGallery, getPlayers, getResults, getSiteSettings, getSponsors, getUpcomingMatches } from '@/lib/queries'
+import { socialUrl } from '@/lib/site'
+import { imageOf, matchVM, mediaVM, playerVM, sponsorVM, type MatchVM } from '@/lib/view'
 
 export const metadata: Metadata = {
-  title: { absolute: 'Xtreme FC | Fixtures, squad and trials' },
-  description:
-    'The home of Xtreme FC: next match, latest results, the squad, club news and how to join or sponsor the club.',
+  title: { absolute: `${CLUB_NAME} | Squad, results and trials` },
+  description: `The home of ${CLUB_NAME}: the next match, recent results, the squad and how to join or sponsor the club.`,
   alternates: { canonical: '/' },
 }
 
+function ResultRow({ m, i }: { m: MatchVM; i: number }) {
+  return (
+    <Reveal
+      i={i}
+      as="a"
+      href={`/results/${m.slug}`}
+      className="rrow"
+      aria-label={`${m.home.name} ${m.home.score}, ${m.away.name} ${m.away.score}, ${formatDay(m.kickoff)}`}
+    >
+      <span className="rrow-d">{formatDay(m.kickoff)}</span>
+      <span className="rrow-t">
+        <span>{m.home.name}</span>
+        <b className="tnum">
+          {m.home.score} – {m.away.score}
+        </b>
+        <span>{m.away.name}</span>
+      </span>
+      {m.outcome && <Badge status={m.outcome} />}
+    </Reveal>
+  )
+}
+
 export default async function HomePage() {
-  const [settings, upcoming, results, players, posts, gallery, sponsors] = await Promise.all([
+  const [settings, upcoming, results, featured, allPlayers, gallery, sponsors] = await Promise.all([
     getSiteSettings(),
-    getUpcomingMatches(2),
-    getResults(3),
+    getUpcomingMatches(4),
+    getResults(8),
     getFeaturedPlayers(),
-    getLatestPosts(3),
+    getPlayers(),
     getGallery(6),
     getSponsors(),
   ])
 
-  const nextMatch = upcoming?.[0]
-  const lastResult = results?.find((m) => m.status === 'fulltime')
-  const stripMatch = nextMatch ?? lastResult
-  const heroImage = asMedia(settings?.heroImage)
-  const instagram = settings?.socials?.find((s) => s.network === 'instagram')
+  const up = (upcoming ?? []).map(matchVM)
+  const res = (results ?? []).filter((m) => m.status === 'fulltime').map(matchVM)
+  const live = up.find((m) => m.status === 'live') ?? null
+  const next = up.find((m) => m.status === 'scheduled' && new Date(m.kickoff).getTime() > Date.now()) ?? null
+  const squad = (allPlayers ?? []).filter((p) => p.squadRole !== 'guest')
+  const players = (featured?.length ? featured : squad.slice(0, 6)).map(playerVM)
+  const photos = (gallery ?? []).map(mediaVM)
+  const partners = (sponsors ?? []).map(sponsorVM)
+
+  const headline = (settings?.heroHeadline || 'Play with intent.').trim().split(/\s+/)
   const sameAs = (settings?.socials ?? []).map((s) => s.url)
 
   return (
-    <>
-      <JsonLd
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'SportsTeam',
-          name: 'Xtreme FC',
-          sport: 'Football',
-          url: absoluteUrl('/'),
-          logo: absoluteUrl('/brand/badge-512.webp'),
-          ...(settings?.foundingYear ? { foundingDate: String(settings.foundingYear) } : {}),
-          ...(settings?.email ? { email: settings.email } : {}),
-          ...(settings?.homeGround || settings?.address
-            ? { location: { '@type': 'Place', name: settings?.homeGround ?? undefined, address: settings?.address ?? undefined } }
-            : {}),
-          ...(sameAs.length ? { sameAs } : {}),
+    <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SportsTeam',
+            name: CLUB_NAME,
+            sport: 'Football',
+            url: absoluteUrl('/'),
+            logo: absoluteUrl('/brand/emblem-512.webp'),
+            ...(settings?.foundingYear ? { foundingDate: String(settings.foundingYear) } : {}),
+            ...(settings?.email ? { email: settings.email } : {}),
+            ...(sameAs.length ? { sameAs } : {}),
+          }).replace(/</g, '\\u003c'),
         }}
       />
 
-      {/* 1. Hero */}
-      <section className="hero" aria-labelledby="hero-title">
-        {heroImage ? (
-          <div className="hero__media">
-            <MediaImage media={heroImage} alt="" size="large" sizes="100vw" priority />
-          </div>
-        ) : (
-          <div className="hero__lines" aria-hidden="true" />
-        )}
-        <div className="container">
-          <div className="hero__content">
-            <span className="eyebrow">
-              <OrSupply value={settings?.tagline} what="tagline" />
-            </span>
-            <h1 id="hero-title" className="t-display">
-              {settings?.heroHeadline || 'Xtreme FC'}
+      <section className="hero">
+        <div className="hero-lines" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+        <div className="wrap hero-in">
+          <div className="hero-copy">
+            <div className="eyebrow hero-fade" style={{ animationDelay: '60ms' }}>
+              {settings?.tagline || CLUB_NAME}
+            </div>
+            <h1 className="hero-h">
+              {headline.map((w, i) => (
+                <span key={i}>
+                  <span className="hl">
+                    <span className={i === headline.length - 1 ? 'neon' : undefined} style={{ animationDelay: 120 + i * 100 + 'ms' }}>
+                      {w}
+                    </span>
+                  </span>{' '}
+                </span>
+              ))}
             </h1>
-            <p className="t-lead">
-              {!settings?.heroHeadline && (
-                <>
-                  <Supply what="headline (8 words max)" />{' '}
-                </>
-              )}
-              <OrSupply value={settings?.heroLead} what="lead paragraph (25 words max)" />
+            <p className="hero-lead hero-fade" style={{ animationDelay: '460ms' }}>
+              {settings?.heroLead || 'A local club built on discipline and pace. See the squad, the next match, and how to join.'}
             </p>
-            <div className="btn-row">
-              <Link className="btn btn--primary btn--lg" href="/join" data-track="join_cta_click" data-track-location="hero">
-                Join the club
-              </Link>
-              <Link className="btn btn--secondary btn--lg" href="/fixtures">
-                View fixtures
-              </Link>
+            <div className="btnrow hero-fade" style={{ animationDelay: '560ms' }}>
+              <Button size="large" icon="arrow-right" href="/join" data-track="join_cta_click" data-track-location="hero">
+                Apply for trials
+              </Button>
+              <Button variant="secondary" size="large" href="/results">
+                View results
+              </Button>
             </div>
           </div>
+          <div className="hero-badge" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/emblem-512.webp" alt="" width={360} height={360} />
+          </div>
+        </div>
+        <div className="wrap strip-wrap">
+          <MatchStrip
+            live={live}
+            next={next}
+            last={res[0] ?? null}
+            failed={upcoming === null && results === null}
+            instagram={socialUrl(settings, 'instagram')}
+          />
         </div>
       </section>
 
-      {/* 2. Match strip */}
-      <section className="match-strip" aria-label={nextMatch ? 'Next match' : 'Latest result'}>
-        <div className="container">
-          {upcoming === null && results === null ? (
-            <div className="scoreboard clip">
-              <p className="t-secondary" style={{ textAlign: 'center' }}>
-                Match information is unavailable right now. <Link href="/fixtures">See all fixtures</Link>.
-              </p>
-            </div>
-          ) : stripMatch ? (
-            <>
-              <Link href={`/fixtures/${stripMatch.slug}`} style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
-                <Scoreboard match={stripMatch} />
-              </Link>
-              <div className="match-strip__foot">
-                <TextLink href="/fixtures">All fixtures</TextLink>
-              </div>
-            </>
-          ) : (
-            <div className="scoreboard clip">
-              <p style={{ textAlign: 'center' }}>
-                No match scheduled.{' '}
-                {instagram ? (
-                  <a href={instagram.url} target="_blank" rel="noopener noreferrer" data-social="instagram">
-                    Follow us on Instagram for updates<span className="sr-only"> (opens in a new tab)</span>
-                  </a>
-                ) : (
-                  'Follow us for updates.'
-                )}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 3. Club intro */}
-      <section className="section" aria-labelledby="intro-title">
-        <div className="container split">
-          <div className="stack">
-            <span className="eyebrow eyebrow--rule">The club</span>
-            <h2 id="intro-title" className="t-h2">
-              Who we are
-            </h2>
-            <p className="t-lead measure">
-              <OrSupply value={settings?.clubIntro} what="club intro (60 words max)" />
+      <Sec>
+        <div className="split">
+          <div>
+            <SectionHead eyebrow="The club" title="Built to compete" />
+            <p className="body-l">
+              {settings?.clubIntro || '[CLUB TO SUPPLY: club story, max 60 words. Who the club is, where it plays, what it stands for.]'}
             </p>
-            <div className="btn-row">
-              <TextLink href="/about">About the club</TextLink>
-              {instagram && (
-                <a className="link" href={instagram.url} target="_blank" rel="noopener noreferrer" data-social="instagram">
-                  <SocialIcon network="instagram" size={16} /> Follow on Instagram
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              )}
-            </div>
+            <Button variant="tertiary" icon="arrow-right" href="/about">
+              About the club
+            </Button>
           </div>
-          <div className="article-cover clip" style={{ margin: 0 }}>
-            {asMedia(settings?.introImage) ? (
-              <MediaImage media={asMedia(settings?.introImage)} sizes="(min-width: 1024px) 40vw, 100vw" />
-            ) : (
-              <div className="media-placeholder" aria-hidden="true">
-                <Badge size={120} />
-              </div>
-            )}
-          </div>
+          <Reveal>
+            <Ph ratio="4/3" clip="lg" label="Club photo" image={imageOf(settings?.introImage, 'large')} />
+          </Reveal>
         </div>
-      </section>
+      </Sec>
 
-      {/* 4. Featured players */}
-      {players && players.length > 0 && (
-        <section className="section section--alt" aria-labelledby="players-title">
-          <div className="container">
-            <SectionHead eyebrow="The squad" title="Meet the players" id="players-title" link={{ href: '/squad', label: 'Full squad' }} />
-            <ul role="list" className="scroll-row">
-              {players.map((p) => (
-                <li key={p.id}>
-                  <PlayerCard player={p} compact />
-                </li>
-              ))}
-            </ul>
-            {players.length > 1 && <p className="scroll-hint t-caption">Swipe for more players →</p>}
+      <Sec alt>
+        <SectionHead eyebrow="Featured players" title="Meet the squad" more="Full squad" moreHref="/squad" />
+        {allPlayers === null ? (
+          <ErrorState title="Squad could not be loaded" description="Check your connection and try again." retryHref="/" />
+        ) : players.length === 0 ? (
+          <p className="muted">Players will appear here once the club adds them.</p>
+        ) : (
+          <PlayerRow players={players} />
+        )}
+      </Sec>
+
+      <Sec>
+        <SectionHead eyebrow="Match history" title="Recent results" more="All results" moreHref="/results" />
+        {results === null ? (
+          <p className="muted">
+            Results could not be loaded. <Link href="/results">Open the results page</Link>.
+          </p>
+        ) : res.length === 0 ? (
+          <p className="muted">Results appear here after full time.</p>
+        ) : (
+          <div className="stack-tight" style={{ maxWidth: 960 }}>
+            {res.slice(0, 4).map((m, i) => (
+              <ResultRow key={m.slug} m={m} i={i} />
+            ))}
           </div>
-        </section>
+        )}
+      </Sec>
+
+      {photos.length > 0 && (
+        <Sec alt>
+          <SectionHead eyebrow="Gallery" title="Match moments" more="Open gallery" moreHref="/gallery" />
+          <TileGrid items={photos} />
+        </Sec>
       )}
 
-      {/* 5. Results & fixtures */}
-      <section className="section" aria-labelledby="matches-title">
-        <div className="container">
-          <SectionHead eyebrow="Matches" title="Fixtures & results" id="matches-title" link={{ href: '/fixtures', label: 'All fixtures' }} />
-          <div className="split split--top">
-            <div className="stack">
-              <h3 className="t-h4">Next fixtures</h3>
-              {upcoming === null ? (
-                <p className="t-secondary">
-                  Fixtures could not be loaded. <Link href="/fixtures">Open the fixtures page</Link>.
-                </p>
-              ) : upcoming.length ? (
-                <div className="match-list">
-                  {upcoming.map((m) => (
-                    <MatchCard key={m.id} match={m} headingLevel={4} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState icon={<CalendarX2 aria-hidden="true" />} title="No matches scheduled">
-                  <p>Follow us for updates.</p>
-                </EmptyState>
-              )}
-            </div>
-            {results && results.length > 0 && (
-              <div className="stack">
-                <h3 className="t-h4">Latest results</h3>
-                <div className="match-list">
-                  {results.map((m) => (
-                    <MatchCard key={m.id} match={m} headingLevel={4} />
-                  ))}
-                </div>
-              </div>
-            )}
+      {partners.length > 0 && (
+        <Sec>
+          <SectionHead eyebrow="Sponsors" title="Our partners" more="Partner with us" moreHref="/sponsors" />
+          <div className="grid-4">
+            {partners.map((s, i) => (
+              <Reveal i={i} key={s.id}>
+                <SponsorLogo s={s} />
+              </Reveal>
+            ))}
           </div>
-        </div>
-      </section>
-
-      {/* 6. News */}
-      {posts && posts.length > 0 && (
-        <section className="section section--alt" aria-labelledby="news-title">
-          <div className="container">
-            <SectionHead eyebrow="Latest" title="Club news" id="news-title" link={{ href: '/news', label: 'All news' }} />
-            <div className="home-news">
-              {posts.map((p, i) => (
-                <NewsCard key={p.id} post={p} featured={false} priority={i === 0} />
-              ))}
-            </div>
-          </div>
-        </section>
+        </Sec>
       )}
 
-      {/* 7. Gallery highlights */}
-      {gallery && gallery.length > 0 && (
-        <section className="section" aria-labelledby="gallery-title">
-          <div className="container">
-            <SectionHead eyebrow="Gallery" title="Match-day moments" id="gallery-title" link={{ href: '/gallery', label: 'Open gallery' }} />
-            <Gallery items={toGalleryItems(gallery)} limit={6} gridClass="gallery-grid gallery-grid--home" />
-          </div>
-        </section>
-      )}
-
-      {/* 8. Sponsors (only real ones) */}
-      {sponsors && sponsors.length > 0 && (
-        <section className="section section--alt" aria-labelledby="sponsors-title">
-          <div className="container">
-            <SectionHead eyebrow="Partners" title="Our sponsors" id="sponsors-title" link={{ href: '/sponsors', label: 'Partner with us' }} />
-            <SponsorGrid sponsors={sponsors} />
-          </div>
-        </section>
-      )}
-
-      {/* 9. Join CTA */}
-      <JoinCta text={settings?.joinCtaText} />
-    </>
+      <JoinBand text={settings?.joinCtaText} />
+    </div>
   )
 }
+

@@ -3,13 +3,25 @@
 import { createHash } from 'crypto'
 import { headers } from 'next/headers'
 import type { Payload } from 'payload'
-import { labelFor, ENQUIRY_TYPES, EXPERIENCE_LEVELS, PREFERRED_POSITIONS, SPONSOR_INTERESTS } from '@/lib/constants'
+import {
+  COMMITTEE_ROLES,
+  ENQUIRY_TYPES,
+  EXPERIENCE_LEVELS,
+  FEET,
+  labelFor,
+  PREFERRED_POSITIONS,
+  SPONSOR_INTERESTS,
+  TEAMS,
+} from '@/lib/constants'
 import { getPayloadClient } from '@/lib/payload'
 import {
   FORM_FIELDS,
   HONEYPOT,
+  isChecked,
   isMinor,
   normalisePhone,
+  PHOTO_MAX_BYTES,
+  PHOTO_TYPES,
   validate,
   type Errors,
   type FormKind,
@@ -56,7 +68,9 @@ async function recordHit(payload: Payload, key: string) {
     .catch(() => undefined)
 }
 
-async function isDuplicate(payload: Payload, collection: 'applications' | 'enquiries', fingerprint: string) {
+type InboxCollection = 'applications' | 'enquiries' | 'registrations'
+
+async function isDuplicate(payload: Payload, collection: InboxCollection, fingerprint: string) {
   const { totalDocs } = await payload.count({
     collection,
     where: {
@@ -100,23 +114,36 @@ function readValues(kind: FormKind, formData: FormData): Values {
   return values
 }
 
+const phoneOrRaw = (v: string) => (v ? (normalisePhone(v) ?? v) : undefined)
+
+/** Optional registration photo: images only, under the Vercel body limit. */
+function readPhoto(formData: FormData): File | null | 'invalid' {
+  const file = formData.get('photo')
+  if (!file || typeof file === 'string' || file.size === 0) return null
+  if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) return 'invalid'
+  return file
+}
+
 /**
- * Handles the Join, Sponsor and Contact forms (PRD §J.5):
+ * Handles the Join, Register, Sponsor and Contact forms (PRD §J.5):
  * honeypot → server-side validation → de-duplication → rate limit → insert → email.
  */
 export async function submitForm(kind: FormKind, formData: FormData): Promise<FormResult> {
-  if (!['join', 'sponsor', 'contact'].includes(kind)) return { status: 'error', message: 'Unknown form.' }
+  if (!['join', 'sponsor', 'contact', 'register'].includes(kind)) return { status: 'error', message: 'Unknown form.' }
 
   // Bots fill every field; pretend it worked and store nothing.
   if (String(formData.get(HONEYPOT) ?? '').length > 0) return { status: 'success' }
 
   const values = readValues(kind, formData)
   const errors = validate(kind, values)
+  const photo = kind === 'register' ? readPhoto(formData) : null
+  if (photo === 'invalid') errors.photo = 'Use a JPG, PNG or WebP image under 4 MB'
   if (Object.keys(errors).length > 0) return { status: 'invalid', errors }
 
   try {
     const payload = await getPayloadClient()
-    const collection = kind === 'join' ? 'applications' : 'enquiries'
+    const collection: InboxCollection =
+      kind === 'join' ? 'applications' : kind === 'register' ? 'registrations' : 'enquiries'
     const fingerprint = sha256(`${kind}:${JSON.stringify(values)}`)
 
     if (await isDuplicate(payload, collection, fingerprint)) return { status: 'success' }
@@ -150,6 +177,7 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
             ? { name: values.guardianName, phone: normalisePhone(values.guardianPhone) ?? values.guardianPhone }
             : undefined,
           isMinor: minor,
+          guardianConsent: minor ? isChecked(values.guardianConsent) : undefined,
           consent: true,
           fingerprint,
         },
@@ -167,8 +195,72 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
         ['Guardian', minor ? `${values.guardianName} (${values.guardianPhone})` : null],
         ['Message', values.message],
       ])
+    } else if (kind === 'register') {
+      const minor = isMinor(values.dateOfBirth)
+      const committee = values.mode === 'committee'
+      let photoId: number | undefined
+      if (photo && photo !== 'invalid') {
+        const doc = await payload.create({
+          collection: 'registration-photos',
+          overrideAccess: true,
+          data: { alt: `Registration photo: ${values.fullName}` },
+          file: {
+            data: Buffer.from(await photo.arrayBuffer()),
+            mimetype: photo.type,
+            name: photo.name.replace(/[^\w.-]+/g, '-').slice(-80) || 'photo.jpg',
+            size: photo.size,
+          },
+        })
+        photoId = doc.id
+      }
+      await payload.create({
+        collection: 'registrations',
+        overrideAccess: true,
+        data: {
+          status: 'new',
+          mode: committee ? 'committee' : 'player',
+          registeredBy: committee
+            ? { name: values.regName, role: (values.regRole || 'other') as 'other', phone: phoneOrRaw(values.regPhone) }
+            : undefined,
+          fullName: values.fullName,
+          dateOfBirth: new Date(values.dateOfBirth).toISOString(),
+          phone: phoneOrRaw(values.phone),
+          email: values.email || undefined,
+          address: values.address,
+          photo: photoId,
+          guardian: minor ? { name: values.guardianName, phone: phoneOrRaw(values.guardianPhone) } : undefined,
+          team: (values.team || 'unassigned') as 'unassigned',
+          foot: (values.foot || 'right') as 'right',
+          position: (values.position || 'not-sure') as 'not-sure',
+          secondPosition: values.secondPosition && values.secondPosition !== 'none' ? (values.secondPosition as 'gk') : undefined,
+          shirtNumber: values.shirtNumber ? Number(values.shirtNumber) : undefined,
+          previousClub: values.previousClub || undefined,
+          emergency: {
+            name: values.emergencyName,
+            relationship: values.emergencyRelationship,
+            phone: phoneOrRaw(values.emergencyPhone),
+          },
+          medical: values.medical || undefined,
+          isMinor: minor,
+          guardianConsent: minor ? isChecked(values.guardianConsent) : undefined,
+          committeeConfirmed: committee ? isChecked(values.confirm) : undefined,
+          consent: true,
+          fingerprint,
+        },
+      })
+      // The email leaves out address and medical notes; staff read those in the admin.
+      await notifyClub(payload, `New player registration: ${values.fullName}`, [
+        ['Player', values.fullName],
+        ['Date of birth', values.dateOfBirth],
+        ['Under 18', minor ? 'Yes' : 'No'],
+        ['Team', labelFor(TEAMS, values.team)],
+        ['Position', labelFor(PREFERRED_POSITIONS, values.position)],
+        ['Preferred foot', labelFor(FEET, values.foot)],
+        ['Registered by', committee ? `${values.regName} (${labelFor(COMMITTEE_ROLES, values.regRole)})` : 'The player'],
+        ['Photo', photoId ? 'Attached' : null],
+      ])
     } else {
-      const type = kind === 'sponsor' ? 'sponsor' : values.type
+      const type = kind === 'sponsor' ? 'sponsor' : values.type || 'general'
       await payload.create({
         collection: 'enquiries',
         overrideAccess: true,

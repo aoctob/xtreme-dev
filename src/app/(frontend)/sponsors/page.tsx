@@ -1,77 +1,95 @@
 import type { Metadata } from 'next'
-import { OrSupply, PageHero, SectionHead } from '@/components/Basics'
-import { Form } from '@/components/forms/Form'
-import { SponsorGrid } from '@/components/Sponsors'
-import { sponsorFields } from '@/lib/forms'
-import { getSiteSettings, getSponsors } from '@/lib/queries'
+import { PlacementButton, SponsorForm } from '@/components/kit/forms'
+import { Icon, type IconName } from '@/components/kit/Icon'
+import { Reveal } from '@/components/kit/motion'
+import { PageHero, Sec, SectionHead, SponsorLogo } from '@/components/kit/ui'
+import { CLUB_NAME } from '@/lib/constants'
+import { getJoinPage, getSiteSettings, getSponsors } from '@/lib/queries'
+import { contactLine, responseTime } from '@/lib/site'
+import { sponsorVM } from '@/lib/view'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: 'Sponsors & partners',
-  description: 'Partner with Xtreme FC: sponsorship options and an enquiry form for local businesses.',
+  title: 'Sponsors and partners',
+  description: `Partner with ${CLUB_NAME}: placement options and a partnership enquiry form for local businesses.`,
   alternates: { canonical: '/sponsors' },
 }
 
+const DEFAULT_PLACEMENTS = ['Shirt sponsor', 'Kit sponsor', 'Event sponsor', 'Equipment']
+const PLACEMENT_ICONS: IconName[] = ['shirt', 'layers', 'flag', 'package', 'tag']
+
 export default async function SponsorsPage() {
-  const [settings, sponsors] = await Promise.all([getSiteSettings(), getSponsors()])
-  const options = settings?.placementOptions ?? []
+  const [s, sponsors, join] = await Promise.all([getSiteSettings(), getSponsors(), getJoinPage()])
+  const reasons = s?.partnerReasons?.length
+    ? s.partnerReasons.map((r) => r.text)
+    : Array.from({ length: 3 }, () => '[CLUB TO SUPPLY: verifiable audience fact. Do not publish numbers that cannot be verified.]')
+  const placements = s?.placementOptions?.length
+    ? s.placementOptions.map((p) => ({ title: p.title, text: p.text || '' }))
+    : DEFAULT_PLACEMENTS.map((title) => ({ title, text: '[CLUB TO SUPPLY: what’s included]' }))
+  const partners = (sponsors ?? []).map(sponsorVM)
 
   return (
-    <>
-      <PageHero title="Sponsors & partners" description="Back the club and get your business seen." />
-
-      <section className="section" aria-labelledby="why-title">
-        <div className="container">
-          <SectionHead eyebrow="Partnership" title="Why partner with Xtreme FC" id="why-title" />
-          <p className="t-lead measure" style={{ whiteSpace: 'pre-line' }}>
-            <OrSupply value={settings?.sponsorPitch} what="why partner with the club (verifiable facts only)" />
+    <div>
+      <PageHero
+        title="Sponsors and partners"
+        desc="Put your business in front of the club’s players and supporters."
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'Sponsors' }]}
+      />
+      <Sec>
+        <SectionHead eyebrow="Why partner" title={`Why partner with ${CLUB_NAME}`} />
+        {s?.sponsorPitch && (
+          <p className="body-l" style={{ marginTop: -8 }}>
+            {s.sponsorPitch}
           </p>
+        )}
+        <div className="why">
+          {reasons.map((t, i) => (
+            <Reveal i={i + 1} key={i} className="why-i">
+              <span className="why-n">0{i + 1}</span>
+              <p>{t}</p>
+            </Reveal>
+          ))}
         </div>
-      </section>
+      </Sec>
 
-      {options.length > 0 && (
-        <section className="section section--alt" aria-labelledby="options-title">
-          <div className="container">
-            <SectionHead eyebrow="Options" title="Ways to support" id="options-title" />
-            <ul role="list" className="grid-3">
-              {options.map((o) => (
-                <li key={o.id ?? o.title} className="card clip">
-                  <h3 className="t-h4" style={{ marginBottom: 8 }}>
-                    {o.title}
-                  </h3>
-                  {o.text && <p className="t-small t-secondary">{o.text}</p>}
-                </li>
-              ))}
-            </ul>
+      <Sec alt>
+        <SectionHead eyebrow="Placement options" title="Ways to back the club" />
+        <div className="grid-4">
+          {placements.map((p, i) => (
+            <Reveal i={i} key={p.title + i} className="place">
+              <Icon name={PLACEMENT_ICONS[i % PLACEMENT_ICONS.length]} size={24} color="var(--color-primary-ink)" />
+              <h3 className="h4">{p.title}</h3>
+              <p>{p.text}</p>
+              <PlacementButton title={p.title} />
+            </Reveal>
+          ))}
+        </div>
+      </Sec>
+
+      {partners.length > 0 && (
+        <Sec>
+          <SectionHead eyebrow="Current partners" title="Thank you to our partners" />
+          <div className="grid-4">
+            {partners.map((p, i) => (
+              <Reveal i={i} key={p.id}>
+                <SponsorLogo s={p} />
+              </Reveal>
+            ))}
           </div>
-        </section>
+        </Sec>
       )}
 
-      {sponsors && sponsors.length > 0 && (
-        <section className="section" aria-labelledby="partners-title">
-          <div className="container">
-            <SectionHead eyebrow="Thank you" title="Current partners" id="partners-title" />
-            <SponsorGrid sponsors={sponsors} />
-          </div>
-        </section>
-      )}
-
-      <section className="section section--alt" aria-labelledby="enquiry-title">
-        <div className="container container--text">
-          <SectionHead eyebrow="Get in touch" title="Sponsorship enquiry" id="enquiry-title" />
-          <div className="form-wrap" style={{ background: 'var(--color-surface-raised)' }}>
-            <Form
-              kind="sponsor"
-              fields={sponsorFields}
-              submitLabel="Send enquiry"
-              successTitle="Enquiry sent"
-              successSteps={['Someone from the club will contact you to talk about partnership options.']}
-              fallbackContact={settings?.email || settings?.phone || 'the club'}
-            />
-          </div>
+      <section
+        id="enquiry"
+        className="sec"
+        style={{ background: partners.length ? 'var(--color-surface)' : 'var(--color-background)' }}
+      >
+        <div className="wrap" style={{ maxWidth: 820 }}>
+          <SectionHead eyebrow="Enquiry" title="Send a partnership enquiry" />
+          <SponsorForm contact={contactLine(s)} responseTime={responseTime(join)} />
         </div>
       </section>
-    </>
+    </div>
   )
 }

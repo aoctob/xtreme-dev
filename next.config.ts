@@ -47,6 +47,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },
+  // The design kit replaced Fixtures with Results and has no News pages.
+  async redirects() {
+    return [
+      { source: '/fixtures', destination: '/results', permanent: true },
+      { source: '/fixtures/:slug', destination: '/results/:slug', permanent: true },
+      { source: '/news/:path*', destination: '/', permanent: false },
+    ]
+  },
+  // Registration photos (up to 4 MB) are sent through a Server Action.
+  experimental: { serverActions: { bodySizeLimit: '5mb' } },
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],
