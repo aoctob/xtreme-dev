@@ -67,35 +67,70 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    users: User;
+    matches: Match;
+    players: Player;
+    staff: Staff;
+    sponsors: Sponsor;
+    posts: Post;
     media: Media;
+    applications: Application;
+    enquiries: Enquiry;
+    users: User;
+    'rate-limits': RateLimit;
+    exports: Export;
+    imports: Import;
     'payload-kv': PayloadKv;
+    'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {};
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
+    matches: MatchesSelect<false> | MatchesSelect<true>;
+    players: PlayersSelect<false> | PlayersSelect<true>;
+    staff: StaffSelect<false> | StaffSelect<true>;
+    sponsors: SponsorsSelect<false> | SponsorsSelect<true>;
+    posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
+    enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
+    'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
+    exports: ExportsSelect<false> | ExportsSelect<true>;
+    imports: ImportsSelect<false> | ImportsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: string;
+    defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'site-settings': SiteSetting;
+    'join-page': JoinPage;
+  };
+  globalsSelect: {
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    'join-page': JoinPageSelect<false> | JoinPageSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
   };
   user: User;
   jobs: {
-    tasks: unknown;
+    tasks: {
+      createCollectionExport: TaskCreateCollectionExport;
+      createCollectionImport: TaskCreateCollectionImport;
+      inline: {
+        input: unknown;
+        output: unknown;
+      };
+    };
     workflows: unknown;
   };
 }
@@ -118,11 +153,334 @@ export interface UserAuthOperations {
   };
 }
 /**
+ * Fixtures and results. Times are entered in your local time and shown on the site in IST.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches".
+ */
+export interface Match {
+  id: number;
+  opponentName: string;
+  homeOrAway: 'home' | 'away';
+  kickoffUtc: string;
+  /**
+   * Used in the page address. Leave empty to generate it automatically.
+   */
+  slug?: string | null;
+  /**
+   * e.g. league or friendly.
+   */
+  competition?: string | null;
+  venueName?: string | null;
+  /**
+   * Google Maps link for "Get directions".
+   */
+  venueMapUrl?: string | null;
+  opponentCrest?: (number | null) | Media;
+  status: 'scheduled' | 'live' | 'fulltime' | 'postponed' | 'cancelled';
+  scoreFor?: number | null;
+  scoreAgainst?: number | null;
+  /**
+   * Only if known. Leave empty to hide.
+   */
+  scorers?:
+    | {
+        name: string;
+        minute?: number | null;
+        side?: ('us' | 'them') | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Link a News post (category: Match Report).
+   */
+  report?: (number | null) | Post;
+  gallery?: (number | Media)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Describe what is in the picture, e.g. "Number 9 shooting during the match against [opponent]". Never just "photo".
+   */
+  alt: string;
+  type: 'image' | 'video';
+  /**
+   * YouTube or Instagram link. YouTube plays from youtube-nocookie.com only after a tap.
+   */
+  videoUrl?: string | null;
+  caption?: string | null;
+  /**
+   * Photographer credit (optional).
+   */
+  credit?: string | null;
+  /**
+   * Album name used by the gallery filter, e.g. "Training" or "vs. [opponent]".
+   */
+  album?: string | null;
+  /**
+   * Show this item on the public Gallery page.
+   */
+  showInGallery?: boolean | null;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumb?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    large?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: number;
+  title: string;
+  /**
+   * Used in the page address. Leave empty to generate it automatically.
+   */
+  slug?: string | null;
+  publishedAt: string;
+  category: 'match-report' | 'club-news' | 'trials' | 'sponsor-news';
+  coverImage?: (number | null) | Media;
+  /**
+   * One or two sentences for cards and search results.
+   */
+  excerpt?: string | null;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  authorName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players".
+ */
+export interface Player {
+  id: number;
+  fullName: string;
+  shirtNumber?: number | null;
+  position: 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
+  /**
+   * Used in the page address. Leave empty to generate it automatically.
+   */
+  slug?: string | null;
+  /**
+   * Tick only when the club holds written consent to publish this player (parent/guardian consent for under-18s). A photo cannot be added until this is ticked.
+   */
+  consentOnFile?: boolean | null;
+  /**
+   * Portrait, 4:5 ratio, shoulders-up (PRD §F.4).
+   */
+  photo?: (number | null) | Media;
+  /**
+   * Facts only, 40 words or fewer: joined year, previous clubs, playing style as agreed with the player.
+   */
+  bio?: string | null;
+  /**
+   * Stored for the club. Shown only as age, and only if "Show age" is ticked.
+   */
+  dateOfBirth?: string | null;
+  /**
+   * Club has approved showing the age.
+   */
+  showAge?: boolean | null;
+  nationality?: string | null;
+  /**
+   * Only from the club's own records. Leave empty to hide the stats row.
+   */
+  stats?: {
+    appearances?: number | null;
+    goals?: number | null;
+    assists?: number | null;
+  };
+  /**
+   * Optional, only with the player's consent. Never for under-18s.
+   */
+  socialHandle?: string | null;
+  gallery?: (number | Media)[] | null;
+  isActive?: boolean | null;
+  /**
+   * Show on the home page (4–6 players).
+   */
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "staff".
+ */
+export interface Staff {
+  id: number;
+  name: string;
+  role: string;
+  photo?: (number | null) | Media;
+  bio?: string | null;
+  /**
+   * Lower numbers show first.
+   */
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Only real partners. A sponsor appears on the site only when "Permission on file" is ticked.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sponsors".
+ */
+export interface Sponsor {
+  id: number;
+  name: string;
+  /**
+   * SVG preferred; PNG at least 600 px wide.
+   */
+  logo: number | Media;
+  /**
+   * Tick if the logo only works on a white background.
+   */
+  logoOnWhite?: boolean | null;
+  /**
+   * Sponsor's website (https://…).
+   */
+  url?: string | null;
+  /**
+   * Optional, only if the club defines tiers.
+   */
+  tier?: string | null;
+  /**
+   * Written permission to display the logo.
+   */
+  permissionOnFile?: boolean | null;
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Trial applications from the Join page. Update the status as you follow up.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "applications".
+ */
+export interface Application {
+  id: number;
+  status: 'new' | 'contacted' | 'trial-booked' | 'joined' | 'declined';
+  fullName: string;
+  dateOfBirth: string;
+  phone: string;
+  email?: string | null;
+  preferredPosition?: ('gk' | 'defender' | 'midfielder' | 'forward' | 'not-sure') | null;
+  experienceLevel?: ('beginner' | 'club' | 'academy-state' | 'other') | null;
+  previousClub?: string | null;
+  preferredTrialDate?: string | null;
+  message?: string | null;
+  /**
+   * Required for applicants under 18.
+   */
+  guardian?: {
+    name?: string | null;
+    phone?: string | null;
+  };
+  isMinor?: boolean | null;
+  consent: boolean;
+  /**
+   * Internal notes (not shared with the applicant).
+   */
+  notes?: string | null;
+  fingerprint?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Messages from the Contact and Sponsors pages.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enquiries".
+ */
+export interface Enquiry {
+  id: number;
+  status: 'new' | 'in-progress' | 'closed';
+  type: 'general' | 'match' | 'sponsor' | 'media';
+  name: string;
+  businessName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  interest?: ('shirt' | 'kit' | 'event' | 'equipment' | 'other') | null;
+  message?: string | null;
+  /**
+   * Internal notes.
+   */
+  notes?: string | null;
+  fingerprint?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
+  name?: string | null;
+  /**
+   * Admins manage everything including users. Editors manage content and the inbox.
+   */
+  role: 'admin' | 'editor';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -130,6 +488,7 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -144,11 +503,76 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
+ * via the `definition` "rate-limits".
  */
-export interface Media {
-  id: string;
-  alt: string;
+export interface RateLimit {
+  id: number;
+  key: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "exports".
+ */
+export interface Export {
+  id: number;
+  name?: string | null;
+  format: 'csv' | 'json';
+  limit?: number | null;
+  page?: number | null;
+  sort?: string | null;
+  sortOrder?: ('asc' | 'desc') | null;
+  drafts?: ('yes' | 'no') | null;
+  selectionToUse?: ('currentSelection' | 'currentFilters' | 'all') | null;
+  fields?: string[] | null;
+  collectionSlug: string;
+  where?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "imports".
+ */
+export interface Import {
+  id: number;
+  collectionSlug: string;
+  importMode?: ('create' | 'update' | 'upsert') | null;
+  matchField?: string | null;
+  status?: ('pending' | 'completed' | 'partial' | 'failed') | null;
+  summary?: {
+    imported?: number | null;
+    updated?: number | null;
+    total?: number | null;
+    issues?: number | null;
+    issueDetails?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -166,7 +590,7 @@ export interface Media {
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: string;
+  id: number;
   key: string;
   data:
     | {
@@ -180,23 +604,147 @@ export interface PayloadKv {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs".
+ */
+export interface PayloadJob {
+  id: number;
+  /**
+   * Input data provided to the job
+   */
+  input?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  taskStatus?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  completedAt?: string | null;
+  totalTried?: number | null;
+  /**
+   * If hasError is true this job will not be retried
+   */
+  hasError?: boolean | null;
+  /**
+   * If hasError is true, this is the error that caused it
+   */
+  error?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Task execution log
+   */
+  log?:
+    | {
+        executedAt: string;
+        completedAt: string;
+        taskSlug: 'inline' | 'createCollectionExport' | 'createCollectionImport';
+        taskID: string;
+        input?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        output?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        state: 'failed' | 'succeeded';
+        error?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  taskSlug?: ('inline' | 'createCollectionExport' | 'createCollectionImport') | null;
+  queue?: string | null;
+  waitUntil?: string | null;
+  processing?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: string;
+  id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: string | User;
+        relationTo: 'matches';
+        value: number | Match;
+      } | null)
+    | ({
+        relationTo: 'players';
+        value: number | Player;
+      } | null)
+    | ({
+        relationTo: 'staff';
+        value: number | Staff;
+      } | null)
+    | ({
+        relationTo: 'sponsors';
+        value: number | Sponsor;
+      } | null)
+    | ({
+        relationTo: 'posts';
+        value: number | Post;
       } | null)
     | ({
         relationTo: 'media';
-        value: string | Media;
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'applications';
+        value: number | Application;
+      } | null)
+    | ({
+        relationTo: 'enquiries';
+        value: number | Enquiry;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'rate-limits';
+        value: number | RateLimit;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -206,10 +754,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: string;
+  id: number;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   key?: string | null;
   value?:
@@ -229,7 +777,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: string;
+  id: number;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -237,9 +785,221 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches_select".
+ */
+export interface MatchesSelect<T extends boolean = true> {
+  opponentName?: T;
+  homeOrAway?: T;
+  kickoffUtc?: T;
+  slug?: T;
+  competition?: T;
+  venueName?: T;
+  venueMapUrl?: T;
+  opponentCrest?: T;
+  status?: T;
+  scoreFor?: T;
+  scoreAgainst?: T;
+  scorers?:
+    | T
+    | {
+        name?: T;
+        minute?: T;
+        side?: T;
+        id?: T;
+      };
+  report?: T;
+  gallery?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players_select".
+ */
+export interface PlayersSelect<T extends boolean = true> {
+  fullName?: T;
+  shirtNumber?: T;
+  position?: T;
+  slug?: T;
+  consentOnFile?: T;
+  photo?: T;
+  bio?: T;
+  dateOfBirth?: T;
+  showAge?: T;
+  nationality?: T;
+  stats?:
+    | T
+    | {
+        appearances?: T;
+        goals?: T;
+        assists?: T;
+      };
+  socialHandle?: T;
+  gallery?: T;
+  isActive?: T;
+  featured?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "staff_select".
+ */
+export interface StaffSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  photo?: T;
+  bio?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sponsors_select".
+ */
+export interface SponsorsSelect<T extends boolean = true> {
+  name?: T;
+  logo?: T;
+  logoOnWhite?: T;
+  url?: T;
+  tier?: T;
+  permissionOnFile?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts_select".
+ */
+export interface PostsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  publishedAt?: T;
+  category?: T;
+  coverImage?: T;
+  excerpt?: T;
+  body?: T;
+  authorName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  type?: T;
+  videoUrl?: T;
+  caption?: T;
+  credit?: T;
+  album?: T;
+  showInGallery?: T;
+  prefix?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumb?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        large?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "applications_select".
+ */
+export interface ApplicationsSelect<T extends boolean = true> {
+  status?: T;
+  fullName?: T;
+  dateOfBirth?: T;
+  phone?: T;
+  email?: T;
+  preferredPosition?: T;
+  experienceLevel?: T;
+  previousClub?: T;
+  preferredTrialDate?: T;
+  message?: T;
+  guardian?:
+    | T
+    | {
+        name?: T;
+        phone?: T;
+      };
+  isMinor?: T;
+  consent?: T;
+  notes?: T;
+  fingerprint?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enquiries_select".
+ */
+export interface EnquiriesSelect<T extends boolean = true> {
+  status?: T;
+  type?: T;
+  name?: T;
+  businessName?: T;
+  email?: T;
+  phone?: T;
+  interest?: T;
+  message?: T;
+  notes?: T;
+  fingerprint?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -247,6 +1007,7 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  resetPasswordRequestedAt?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -259,10 +1020,59 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
+ * via the `definition` "rate-limits_select".
  */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
+export interface RateLimitsSelect<T extends boolean = true> {
+  key?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "exports_select".
+ */
+export interface ExportsSelect<T extends boolean = true> {
+  name?: T;
+  format?: T;
+  limit?: T;
+  page?: T;
+  sort?: T;
+  sortOrder?: T;
+  drafts?: T;
+  selectionToUse?: T;
+  fields?: T;
+  collectionSlug?: T;
+  where?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "imports_select".
+ */
+export interface ImportsSelect<T extends boolean = true> {
+  collectionSlug?: T;
+  importMode?: T;
+  matchField?: T;
+  status?: T;
+  summary?:
+    | T
+    | {
+        imported?: T;
+        updated?: T;
+        total?: T;
+        issues?: T;
+        issueDetails?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -282,6 +1092,37 @@ export interface MediaSelect<T extends boolean = true> {
 export interface PayloadKvSelect<T extends boolean = true> {
   key?: T;
   data?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs_select".
+ */
+export interface PayloadJobsSelect<T extends boolean = true> {
+  input?: T;
+  taskStatus?: T;
+  completedAt?: T;
+  totalTried?: T;
+  hasError?: T;
+  error?: T;
+  log?:
+    | T
+    | {
+        executedAt?: T;
+        completedAt?: T;
+        taskSlug?: T;
+        taskID?: T;
+        input?: T;
+        output?: T;
+        state?: T;
+        error?: T;
+        id?: T;
+      };
+  taskSlug?: T;
+  queue?: T;
+  waitUntil?: T;
+  processing?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -317,6 +1158,254 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * Short eyebrow line above the headline.
+   */
+  tagline?: string | null;
+  /**
+   * 8 words or fewer.
+   */
+  heroHeadline?: string | null;
+  /**
+   * 25 words or fewer.
+   */
+  heroLead?: string | null;
+  /**
+   * 16:9, at least 2560×1440, subject in the centre.
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * 60 words or fewer.
+   */
+  clubIntro?: string | null;
+  introImage?: (number | null) | Media;
+  /**
+   * One line on the green "Join" band.
+   */
+  joinCtaText?: string | null;
+  /**
+   * 200 words or fewer.
+   */
+  clubStory?: string | null;
+  storyImage?: (number | null) | Media;
+  foundingYear?: number | null;
+  homeGround?: string | null;
+  values?:
+    | {
+        title: string;
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Meaning of the badge and colours (optional).
+   */
+  badgeMeaning?: string | null;
+  /**
+   * Verifiable entries only. The section is hidden when empty.
+   */
+  timeline?:
+    | {
+        year: string;
+        title: string;
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  email?: string | null;
+  /**
+   * Shown publicly, e.g. +91 98xxxxxxxx
+   */
+  phone?: string | null;
+  /**
+   * Digits only with country code, e.g. 9198xxxxxxxx. Enables the WhatsApp button.
+   */
+  whatsapp?: string | null;
+  address?: string | null;
+  /**
+   * Google Maps link to the ground.
+   */
+  mapUrl?: string | null;
+  /**
+   * Optional static map image.
+   */
+  mapImage?: (number | null) | Media;
+  socials?:
+    | {
+        network: 'instagram' | 'facebook' | 'youtube' | 'x' | 'whatsapp';
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Who receives new application and enquiry emails. Not shown on the site.
+   */
+  notificationEmail?: string | null;
+  /**
+   * "Why partner with Xtreme FC". No numbers that cannot be verified.
+   */
+  sponsorPitch?: string | null;
+  placementOptions?:
+    | {
+        title: string;
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * e.g. "12 months after the last contact". Club to decide.
+   */
+  retentionPeriod?: string | null;
+  /**
+   * Email or phone for privacy requests.
+   */
+  privacyContact?: string | null;
+  privacyLastUpdated?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "join-page".
+ */
+export interface JoinPage {
+  id: number;
+  /**
+   * Age groups and levels.
+   */
+  whoCanJoin?: string | null;
+  ageGroups?: string | null;
+  trialLocation?: string | null;
+  trialLocationMapUrl?: string | null;
+  /**
+   * Published dates appear in the form's "Preferred trial date" list.
+   */
+  trialDates?:
+    | {
+        start: string;
+        /**
+         * e.g. "Under-16s only"
+         */
+        note?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  whatToBring?: string | null;
+  /**
+   * Leave empty to show "Contact the club".
+   */
+  fees?: string | null;
+  faq?:
+    | {
+        question: string;
+        answer: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * e.g. "within 3 days". Shown after an application is sent.
+   */
+  responseTime?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  tagline?: T;
+  heroHeadline?: T;
+  heroLead?: T;
+  heroImage?: T;
+  clubIntro?: T;
+  introImage?: T;
+  joinCtaText?: T;
+  clubStory?: T;
+  storyImage?: T;
+  foundingYear?: T;
+  homeGround?: T;
+  values?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        id?: T;
+      };
+  badgeMeaning?: T;
+  timeline?:
+    | T
+    | {
+        year?: T;
+        title?: T;
+        text?: T;
+        id?: T;
+      };
+  email?: T;
+  phone?: T;
+  whatsapp?: T;
+  address?: T;
+  mapUrl?: T;
+  mapImage?: T;
+  socials?:
+    | T
+    | {
+        network?: T;
+        url?: T;
+        id?: T;
+      };
+  notificationEmail?: T;
+  sponsorPitch?: T;
+  placementOptions?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        id?: T;
+      };
+  retentionPeriod?: T;
+  privacyContact?: T;
+  privacyLastUpdated?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "join-page_select".
+ */
+export interface JoinPageSelect<T extends boolean = true> {
+  whoCanJoin?: T;
+  ageGroups?: T;
+  trialLocation?: T;
+  trialLocationMapUrl?: T;
+  trialDates?:
+    | T
+    | {
+        start?: T;
+        note?: T;
+        id?: T;
+      };
+  whatToBring?: T;
+  fees?: T;
+  faq?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
+  responseTime?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -324,6 +1413,68 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskCreateCollectionExport".
+ */
+export interface TaskCreateCollectionExport {
+  input: {
+    id: string;
+    name: string;
+    batchSize?: number | null;
+    collectionSlug:
+      | 'matches'
+      | 'players'
+      | 'staff'
+      | 'sponsors'
+      | 'posts'
+      | 'media'
+      | 'applications'
+      | 'enquiries'
+      | 'users'
+      | 'rate-limits'
+      | 'exports'
+      | 'imports';
+    drafts?: ('yes' | 'no') | null;
+    exportCollection: string;
+    fields?: string[] | null;
+    format: 'csv' | 'json';
+    limit?: number | null;
+    locale?: string | null;
+    maxLimit?: number | null;
+    page?: number | null;
+    sort?: string | null;
+    userCollection?: string | null;
+    userID?: string | null;
+    where?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskCreateCollectionImport".
+ */
+export interface TaskCreateCollectionImport {
+  input: {
+    importId: string;
+    importCollection: string;
+    userID?: string | null;
+    userCollection?: string | null;
+    batchSize?: number | null;
+    debug?: boolean | null;
+    defaultVersionStatus?: ('draft' | 'published') | null;
+    maxLimit?: number | null;
+  };
+  output?: unknown;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

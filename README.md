@@ -1,67 +1,128 @@
-# Payload Blank Template
+# Xtreme FC website
 
-This template comes configured with the bare minimum to get started on anything you need.
+One Next.js (App Router, TypeScript) app with Payload CMS v3 embedded. The public site and the
+admin panel (`/admin`) deploy together to Vercel's free Hobby plan, with content in Neon Postgres
+and uploads in Vercel Blob. Built from `docs/PRD_2.md` (v1.1) and `docs/design_1.md`.
 
-## Quick start
+## What's inside
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+| Area | Where |
+|------|-------|
+| Public pages (`/`, `/about`, `/squad`, `/squad/[slug]`, `/fixtures`, `/fixtures/[slug]`, `/news`, `/news/[slug]`, `/gallery`, `/join`, `/sponsors`, `/contact`, `/privacy`, 404, 500) | `src/app/(frontend)/` |
+| Admin panel and Payload REST/GraphQL API | `src/app/(payload)/` |
+| Collections: `players`, `staff`, `matches`, `posts`, `media`, `sponsors`, `applications`, `enquiries`, `users` (+ hidden `rate-limits`) | `src/collections/` |
+| Globals: Site settings, Join page | `src/globals/` |
+| Form Server Action (validation, honeypot, 60 s de-dupe, Postgres rate limit 5/IP/hour, email) | `src/app/(frontend)/actions.ts`, `src/lib/validation.ts` |
+| On-demand revalidation hooks | `src/hooks/revalidate.ts` |
+| Design tokens (CSS variables) and styles | `src/app/(frontend)/tokens.css`, `site.css` |
+| Components | `src/components/` |
+| SEO: metadata, `sitemap.xml`, `robots.txt`, `SportsTeam` / `SportsEvent` JSON-LD, share image | pages, `src/app/sitemap.ts`, `src/app/robots.ts`, `public/brand/` |
+| Security headers (CSP, HSTS, etc.) | `next.config.ts` |
+| Database migrations | `src/migrations/` |
 
-## Quick Start - local setup
+## Local setup
 
-To spin up this template locally, follow these steps:
+Requirements: Node 20.18+ (tested on Node 24) and a Postgres database. The easiest is a free
+Neon project with a `dev` branch; any local Postgres also works.
 
-### Clone
+```bash
+npm install
+cp .env.example .env
+```
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+Fill in `.env`:
 
-### Development
+- `DATABASE_URL`: your Neon **pooled** connection string (or local Postgres URL).
+- `PAYLOAD_SECRET`: a long random string, e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+- `BLOB_READ_WRITE_TOKEN`: leave empty locally; uploads are then saved in `./media`.
+- `NEXT_PUBLIC_SITE_URL`: `http://localhost:3000`.
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+```bash
+npm run dev
+```
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Open http://localhost:3000/admin and create the first account. The first account is always an
+**Admin**; later accounts default to **Editor**. In development Payload creates the tables
+automatically.
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+Useful scripts:
 
-#### Docker (Optional)
+| Command | What it does |
+|---------|--------------|
+| `npm run dev` | Development server |
+| `npm run typecheck` | TypeScript check |
+| `npm run build` | Production build |
+| `npm run migrate:create -- <name>` | Create a migration after changing a collection |
+| `npm run migrate` | Apply migrations to the database in `DATABASE_URL` |
+| `npm run ci` | `payload migrate` then `next build` (Vercel's build command) |
+| `npm run generate:types` | Regenerate `src/payload-types.ts` after schema changes |
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+## Changing the data model
 
-To do so, follow these steps:
+1. Edit a collection in `src/collections/` or a global in `src/globals/`.
+2. `npm run generate:types`
+3. `npm run migrate:create -- describe-the-change` and commit the new files in `src/migrations/`.
+4. If you added admin components, also run `npm run generate:importmap`.
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+Deployed builds never push schema automatically; they run the committed migrations first.
 
-## How it works
+## Deploying to Vercel (Hobby, free)
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+1. Push this folder to a GitHub repository and import it in Vercel (framework: Next.js).
+   `vercel.json` already sets the build command to `npm run ci` and the function region to
+   Singapore (`sin1`), close to India.
+2. Create a Neon project in the AWS Singapore region (or add Neon from the Vercel Marketplace so
+   each preview deployment gets its own branch). Copy the **pooled** connection string.
+3. In Vercel → Storage, create a Blob store and connect it to the project (this adds
+   `BLOB_READ_WRITE_TOKEN`).
+4. In Vercel → Settings → Environment Variables add `DATABASE_URL`, `PAYLOAD_SECRET` and
+   `NEXT_PUBLIC_SITE_URL` (the production domain, no trailing slash). Optional:
+   `RESEND_API_KEY` + `EMAIL_FROM_ADDRESS` for form emails, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` for
+   cookieless analytics.
+5. Deploy, then open `/admin` on the live site and create the first Admin account.
 
-### Collections
+Hobby plan notes (PRD §J.8): one build at a time, monthly usage allowances, and Vercel's
+non-commercial terms. Images are served directly from the Blob CDN and pages are cached, which
+keeps usage low. Re-check the terms before publishing paid sponsor placements.
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+## Everyday content tasks (club staff)
 
-- #### Users (Authentication)
+All of these happen in `/admin`; the site updates within seconds, no deploy needed.
 
-  Users are auth-enabled collections that have access to the admin panel.
+- **Add a match:** Club → Matches → Create. Enter the opponent, kickoff (your local time; the site
+  shows IST), venue and maps link. Publish. After the game set **Status** to *Full time* and
+  enter both scores; optionally add scorers, link a match report and add photos.
+- **Add a player:** Club → Players → Create. Tick **Consent on file** before adding a photo
+  (parent/guardian consent for under-18s). Tick **Featured** to show the player on the home page.
+- **Publish news:** Content → News → Create. Choose a category, add a cover image and body, then
+  Publish. Use **Preview** to check a draft first.
+- **Gallery:** Content → Media → upload a photo, write the alt text, tick **Show in gallery** and
+  set an album. For a video, choose type *Video*, upload the poster image and paste the link.
+- **Sponsors:** Club → Sponsors. A sponsor only appears when **Permission on file** is ticked.
+- **Club facts, contact details, socials, trial dates, FAQ:** Settings → Site settings and
+  Settings → Join page. Set **Notification email** so new applications reach the club inbox.
+- **Inbox:** Inbox → Applications / Enquiries. Filter by status, update the status as you follow
+  up, and use **Export** for the weekly CSV backup.
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+## Placeholders
 
-- #### Media
+The PRD forbids invented club facts (constraint C2). Anything the club has not supplied shows as
+an orange `[CLUB TO SUPPLY: …]` marker on the page until it is filled in through the admin, and
+sections with no data (results, news, gallery, sponsors, history, stats) are hidden. Launch
+criterion H.5 #2 is met when no orange marker remains. The privacy policy at `/privacy` is a
+plain-language draft that **must be legally reviewed** (India DPDP Act, 2023) before launch.
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+## Design source
 
-### Docker
+Tokens and components are ported from `docs/design_1.md` (colour tokens §B.5, type scale §C.2,
+spacing and clipped corners §D, components §E, motion §G) into CSS variables in `tokens.css`.
+Fonts are self-hosted Archivo (width axis) and Inter, Latin subset. The badge in `public/brand/`
+was generated from `docs/xfc-logo.jpeg`; replace it with the club's vector file when supplied
+(design.md §A.6). The Claude Design project was not imported in this pass; see the note in the
+project thread.
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+## Not included yet
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+- Email delivery needs a Resend key (otherwise notifications are logged to the server console).
+- CAPTCHA (Turnstile) is not added; the PRD asks for it only if spam appears.
+- Automated axe/Lighthouse CI is not set up.
