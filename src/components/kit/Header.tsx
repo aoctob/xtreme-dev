@@ -51,6 +51,7 @@ export function Header({ announcement }: { announcement?: string | null }) {
           <Link href="/" aria-label={`${CLUB_NAME} home`} className="xh-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={LOGO} alt="" width={40} height={40} />
+            <span className="xh-name">Xtreme Club</span>
           </Link>
           <nav className="xh-nav xh-desk" aria-label="Main">
             {NAV.map((l) => (

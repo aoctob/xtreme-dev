@@ -44,15 +44,15 @@ button,input,select,textarea{font-family:inherit}
 .xh-util p{margin:0;display:flex;gap:8px;align-items:center;white-space:nowrap}.xh-util a{font-size:12px;color:inherit;text-underline-offset:3px}.xh-util a:hover{color:var(--color-text-primary)}
 .xh-util .xh-join{color:var(--color-text-primary);text-decoration:underline}.xh-util-r{display:flex;justify-content:flex-end;gap:20px}.xh-util-r a{text-decoration:none}
 .xh-outer{padding:12px 16px;pointer-events:none}
-.xh-bar{height:60px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:0 12px 0 16px;border-radius:16px;pointer-events:auto;border:1px solid var(--color-border);background:rgba(12,31,17,.85);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);transition:background var(--motion-base) linear,box-shadow var(--motion-base) linear,border-color var(--motion-base) linear}
-.xh.scrolled .xh-bar{border-color:rgba(244,241,225,.14);background:rgba(12,31,17,.62);box-shadow:0 8px 32px rgba(7,20,10,.35)}
-.xh-logo{display:flex;justify-self:start}.xh-logo img{width:40px;height:40px;border-radius:50%;object-fit:cover}
-.xh-nav{display:flex;gap:36px}
-.xh-link{font-weight:600;font-size:15px;font-family:var(--font-body);letter-spacing:.01em;color:var(--color-text-secondary);text-decoration:none;position:relative;padding:19px 0;display:inline-block}
+.xh-bar{box-sizing:border-box;height:60px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:0 12px 0 16px;border-radius:16px;pointer-events:auto;border:1px solid var(--color-border);background:rgba(12,31,17,.94);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);transition:background var(--motion-base) linear,box-shadow var(--motion-base) linear,border-color var(--motion-base) linear}
+.xh.scrolled .xh-bar{border-color:rgba(244,241,225,.14);background:rgba(12,31,17,.86);box-shadow:0 8px 32px rgba(7,20,10,.35)}
+.xh-logo{display:flex;align-items:center;gap:12px;justify-self:start;text-decoration:none;min-width:0}.xh-name{font-family:var(--font-display);font-weight:800;font-size:18px;line-height:1;letter-spacing:.01em;color:var(--color-text-primary);white-space:nowrap}.xh-logo img{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover}
+.xh-nav{display:flex;gap:36px;align-self:stretch}
+.xh-link{font-weight:600;font-size:15px;font-family:var(--font-body);letter-spacing:.01em;color:var(--color-text-secondary);text-decoration:none;position:relative;padding:0;display:flex;align-items:center;height:100%;line-height:1}
 .xh-link[aria-current=page]{color:var(--color-text-primary)}
 .xh-link>span{position:absolute;left:0;right:0;bottom:14px;height:2px;background:var(--color-text-primary);transform:scaleX(0);transform-origin:left;transition:transform var(--motion-fast) var(--ease-out)}
 .xh-link[aria-current=page]>span{background:var(--color-primary)}.xh-link:hover>span,.xh-link[aria-current=page]>span{transform:scaleX(1)}
-.xh-right{display:flex;align-items:center;gap:12px;justify-self:end}
+.xh-right{display:flex;align-items:center;gap:12px;justify-self:end}.xh-right>div{display:flex;align-items:center}
 /* The kit leaves the menu button in the middle column on phones; keep it on the right. */
 .xh-right{grid-column:3}
 .xh-search{display:flex;align-items:center;gap:8px;width:200px;height:40px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;color:var(--color-text-secondary);cursor:text;margin:0;transition:border-color var(--motion-fast) var(--ease-out)}
@@ -63,7 +63,7 @@ button,input,select,textarea{font-family:inherit}
 @media(min-width:1024px){.xh-menu{display:none}}@media(max-width:1023px){.xh-desk{display:none!important}}
 @media(max-width:1279px){.xh-search{display:none}.xh-search-btn{display:flex}}
 @media(hover:hover){.xh-link:hover{color:var(--color-text-primary)}.xh-search-btn:hover{color:var(--color-text-primary);border-color:var(--color-text-primary)}}
-@media(max-width:479px){.xh-util{padding:0 12px}}
+@media(max-width:479px){.xh-util{padding:0 12px}.xh-name{font-size:16px}}
 
 /* Mobile drawer */
 #mobile-nav{position:fixed;inset:0;z-index:50;display:flex;justify-content:flex-end}
