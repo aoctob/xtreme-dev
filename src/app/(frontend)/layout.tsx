@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import Script from 'next/script'
 import type { ReactNode } from 'react'
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next'
 import { Analytics } from '@/components/Analytics'
 import { Footer } from '@/components/kit/Footer'
 import { Header } from '@/components/kit/Header'
@@ -65,6 +66,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
           <Footer settings={settings} />
         </ToastProvider>
         <Analytics />
+        <VercelAnalytics />
         {umamiId && <Script src={umamiSrc} data-website-id={umamiId} strategy="afterInteractive" />}
       </body>
     </html>
