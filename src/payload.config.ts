@@ -27,6 +27,12 @@ export default buildConfig({
   admin: {
     user: Users.slug,
     meta: { titleSuffix: ' · XTREME CLUB admin' },
+    components: {
+      graphics: {
+        Logo: '@/components/admin/Logo',
+        Icon: '@/components/admin/Icon',
+      },
+    },
     importMap: { baseDir: path.resolve(dirname) },
   },
   collections: [
