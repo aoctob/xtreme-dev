@@ -13,6 +13,7 @@ import {
   SPONSOR_INTERESTS,
   TEAMS,
 } from '@/lib/constants'
+import { getCurrentUser } from '@/lib/auth'
 import { getPayloadClient } from '@/lib/payload'
 import {
   FORM_FIELDS,
@@ -213,11 +214,15 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
         })
         photoId = doc.id
       }
+      // A signed-in player registering themself is linked to the record so they can follow it.
+      const me = await getCurrentUser()
       await payload.create({
         collection: 'registrations',
         overrideAccess: true,
+        user: me ?? undefined,
         data: {
-          status: 'new',
+          applicationStatus: 'pending',
+          user: me && !committee ? me.id : undefined,
           mode: committee ? 'committee' : 'player',
           registeredBy: committee
             ? { name: values.regName, role: (values.regRole || 'other') as 'other', phone: phoneOrRaw(values.regPhone) }

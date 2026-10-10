@@ -44,9 +44,8 @@ Fill in `.env`:
 npm run dev
 ```
 
-Open http://localhost:3000/admin and create the first account. The first account is always an
-**Admin**; later accounts default to **Editor**. In development Payload creates the tables
-automatically.
+Open http://localhost:3000/admin and create the first account. The first account is always a
+**Super Admin**. In development Payload creates the tables automatically.
 
 Useful scripts:
 
@@ -83,7 +82,8 @@ Deployed builds never push schema automatically; they run the committed migratio
    `NEXT_PUBLIC_SITE_URL` (the production domain, no trailing slash). Optional:
    `RESEND_API_KEY` + `EMAIL_FROM_ADDRESS` for form emails, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` for
    cookieless analytics.
-5. Deploy, then open `/admin` on the live site and create the first Admin account.
+5. Deploy, then open `/admin` on the live site and create the first account. It becomes the
+   **Super Admin**; create everyone else from there (see Roles below).
 
 Hobby plan notes (PRD §J.8): one build at a time, monthly usage allowances, and Vercel's
 non-commercial terms. Images are served directly from the Blob CDN and pages are cached, which
@@ -96,18 +96,50 @@ All of these happen in `/admin`; the site updates within seconds, no deploy need
 - **Add a match:** Club → Matches → Create. Enter the opponent, kickoff (your local time; the site
   shows IST), venue and maps link. Publish. After the game set **Status** to *Full time* and
   enter both scores; optionally add scorers, link a match report and add photos.
-- **Add a player:** Club → Players → Create. Tick **Consent on file** before adding a photo
-  (parent/guardian consent for under-18s). Tick **Featured** to show the player on the home page.
-  Set **Squad role** to *Guest player* for tournament guests; they appear under "Guest players".
-- **Player registrations:** Inbox → Player registrations. These hold addresses, emergency contacts
-  and medical notes, so share them only with coaches and first-aid staff.
+- **Approve a player:** Committee dashboard (`/dashboard`) → Approvals. Open the registration,
+  then *Start review*, *Request changes*, *Approve* or *Reject* (a reason is required).
+  Approving never publishes anything.
+- **Publish a player:** on the approved record, *Create draft profile*, add the approved photo and
+  bio in the admin (Players and members → Public profiles; tick **Consent on file** first), then
+  *Publish*. Only published profiles appear on `/squad`. Tick **Featured** to show the player on
+  the home page; set **Squad role** to *Guest player* for tournament guests.
+- **Player records** (Players and members → Player records) hold addresses, emergency contacts
+  and medical notes. Only the roles listed below can open them.
 - **Gallery:** Content → Media → upload a photo, write the alt text, tick **Show in gallery** and
   set an album. For a video, choose type *Video*, upload the poster image and paste the link.
 - **Sponsors:** Club → Sponsors. A sponsor only appears when **Permission on file** is ticked.
 - **Club facts, contact details, socials, trial dates, FAQ:** Settings → Site settings and
   Settings → Join page. Set **Notification email** so new applications reach the club inbox.
-- **Inbox:** Inbox → Applications / Player registrations / Enquiries. Filter by status, update the status as you follow
+- **Announcements:** Committee dashboard → Announcements. Published ones appear on `/announcements`.
+- **Inbox:** Inbox → Applications / Enquiries. Filter by status, update the status as you follow
   up, and use **Export** for the weekly CSV backup.
+
+## Roles and access
+
+Defined in `docs/xtreme-club-roles-permissions.md` (one folder up) and implemented in
+`src/access/roles.ts`. Every rule is enforced by Payload on the server, so `/admin`, the REST and
+GraphQL APIs and the dashboard all behave the same.
+
+| Role | How someone gets it | What it allows |
+|------|--------------------|----------------|
+| Super Admin | Users → Roles (first account gets it automatically) | Everything, including users and roles |
+| President, Vice President | Active committee appointment | Appoint and end committee members, conservators and mentors; read player records, members and finance; publish announcements |
+| Secretary, Joint Secretary | Active committee appointment | Create, edit, archive and delete player and member records; approve registrations; prepare and publish public profiles; create Player/Member logins; announcements |
+| Treasurer | Active committee appointment | Create and update financial summaries; limited player fields; announcements |
+| Conservator (3), Mentor (2) | Active conservator / mentor appointment | Read-only: player records, members, finance (conservators also see the audit log) |
+| Content editor | Users → Roles | Matches, gallery, sponsors, staff, site text and the enquiry inbox |
+| Player, Member | Users → Roles, or *Create login* on a record | `/account` only: see their own registration or membership; players answer correction requests |
+
+- Committee, conservator and mentor powers come only from an **active appointment linked to a
+  login** (Appointments in the admin, or the dashboard's Appointments page). Ending or deleting
+  the appointment removes the powers on the next request. Nobody can appoint themselves.
+- Players and Members cannot open `/admin`. They sign in at `/login` and use `/account`.
+- *Create login* on a record makes the account and shows a one-time link to set a password
+  (also emailed when `RESEND_API_KEY` is set). No password is ever shown or sent.
+- Every approval, rejection, publication change, deletion, role change and finance update is
+  written to the audit log (Committee → Audit log), which nobody can edit or delete.
+- Uploaded player documents and registration photos are served only through Payload's access
+  check, and Blob file names get a random suffix.
 
 ## Placeholders
 

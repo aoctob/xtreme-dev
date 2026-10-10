@@ -122,9 +122,47 @@ export const FEET = [
   { label: 'Both', value: 'both' },
 ] as const
 
+/** Registration workflow (spec §5). Approval is separate from publication. */
 export const REGISTRATION_STATUSES = [
-  { label: 'New', value: 'new' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Under review', value: 'under_review' },
+  { label: 'Changes requested', value: 'changes_requested' },
   { label: 'Approved', value: 'approved' },
-  { label: 'Needs more info', value: 'needs-info' },
-  { label: 'Declined', value: 'declined' },
+  { label: 'Rejected', value: 'rejected' },
+] as const
+
+export type ApplicationStatus = (typeof REGISTRATION_STATUSES)[number]['value']
+
+export const PUBLICATION_STATUSES = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending publication', value: 'pending_publication' },
+  { label: 'Published', value: 'published' },
+  { label: 'Unpublished', value: 'unpublished' },
+] as const
+
+export const MEMBERSHIP_STATUSES = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Active', value: 'active' },
+  { label: 'Suspended', value: 'suspended' },
+  { label: 'Inactive', value: 'inactive' },
+] as const
+
+export const MEMBERSHIP_TYPES = [
+  { label: 'Playing member', value: 'playing' },
+  { label: 'Non-playing member', value: 'non-playing' },
+  { label: 'Honorary member', value: 'honorary' },
+] as const
+
+export const ANNOUNCEMENT_STATUSES = [
+  { label: 'Draft', value: 'draft' },
+  { label: 'Published', value: 'published' },
+  { label: 'Unpublished', value: 'unpublished' },
+] as const
+
+export const ANNOUNCEMENT_CATEGORIES = [
+  { label: 'Club news', value: 'club' },
+  { label: 'Matches', value: 'matches' },
+  { label: 'Training', value: 'training' },
+  { label: 'Trials and registration', value: 'registration' },
+  { label: 'Events', value: 'events' },
 ] as const

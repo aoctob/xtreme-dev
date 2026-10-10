@@ -68,14 +68,22 @@ export interface Config {
   blocks: {};
   collections: {
     matches: Match;
-    players: Player;
     staff: Staff;
     sponsors: Sponsor;
     posts: Post;
     media: Media;
-    applications: Application;
     registrations: Registration;
+    players: Player;
+    members: Member;
     'registration-photos': RegistrationPhoto;
+    'player-documents': PlayerDocument;
+    announcements: Announcement;
+    'financial-summaries': FinancialSummary;
+    'committee-members': CommitteeMember;
+    conservators: Conservator;
+    mentors: Mentor;
+    'audit-logs': AuditLog;
+    applications: Application;
     enquiries: Enquiry;
     users: User;
     'rate-limits': RateLimit;
@@ -87,17 +95,29 @@ export interface Config {
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    registrations: {
+      publicProfile: 'players';
+    };
+  };
   collectionsSelect: {
     matches: MatchesSelect<false> | MatchesSelect<true>;
-    players: PlayersSelect<false> | PlayersSelect<true>;
     staff: StaffSelect<false> | StaffSelect<true>;
     sponsors: SponsorsSelect<false> | SponsorsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
     registrations: RegistrationsSelect<false> | RegistrationsSelect<true>;
+    players: PlayersSelect<false> | PlayersSelect<true>;
+    members: MembersSelect<false> | MembersSelect<true>;
     'registration-photos': RegistrationPhotosSelect<false> | RegistrationPhotosSelect<true>;
+    'player-documents': PlayerDocumentsSelect<false> | PlayerDocumentsSelect<true>;
+    announcements: AnnouncementsSelect<false> | AnnouncementsSelect<true>;
+    'financial-summaries': FinancialSummariesSelect<false> | FinancialSummariesSelect<true>;
+    'committee-members': CommitteeMembersSelect<false> | CommitteeMembersSelect<true>;
+    conservators: ConservatorsSelect<false> | ConservatorsSelect<true>;
+    mentors: MentorsSelect<false> | MentorsSelect<true>;
+    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
+    applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
     enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
@@ -312,6 +332,189 @@ export interface Post {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "staff".
+ */
+export interface Staff {
+  id: number;
+  name: string;
+  role: string;
+  photo?: (number | null) | Media;
+  bio?: string | null;
+  /**
+   * Lower numbers show first.
+   */
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Only real partners. A sponsor appears on the site only when "Permission on file" is ticked.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sponsors".
+ */
+export interface Sponsor {
+  id: number;
+  name: string;
+  /**
+   * SVG preferred; PNG at least 600 px wide. Without a logo the name is shown.
+   */
+  logo?: (number | null) | Media;
+  /**
+   * Tick if the logo only works on a white background.
+   */
+  logoOnWhite?: boolean | null;
+  /**
+   * Sponsor's website (https://…).
+   */
+  url?: string | null;
+  /**
+   * Optional, only if the club defines tiers.
+   */
+  tier?: string | null;
+  /**
+   * Written permission to display the logo.
+   */
+  permissionOnFile?: boolean | null;
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Private player records and registrations. Approving a player does not publish them: prepare and publish a Public profile separately.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "registrations".
+ */
+export interface Registration {
+  id: number;
+  applicationStatus: 'pending' | 'under_review' | 'changes_requested' | 'approved' | 'rejected';
+  membershipStatus?: ('pending' | 'active' | 'suspended' | 'inactive') | null;
+  /**
+   * The player’s own account, so they can follow their application at /account.
+   */
+  user?: (number | null) | User;
+  /**
+   * The limited public profile prepared from this record, if any.
+   */
+  publicProfile?: {
+    docs?: (number | Player)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  mode: 'player' | 'committee';
+  registeredBy?: {
+    name?: string | null;
+    role?: ('secretary' | 'coach' | 'team-manager' | 'treasurer' | 'other') | null;
+    phone?: string | null;
+  };
+  fullName: string;
+  dateOfBirth: string;
+  phone?: string | null;
+  email?: string | null;
+  address: string;
+  photo?: (number | null) | RegistrationPhoto;
+  guardian?: {
+    name?: string | null;
+    phone?: string | null;
+  };
+  team?: ('unassigned' | 'senior' | 'youth') | null;
+  foot?: ('right' | 'left' | 'both') | null;
+  position?: ('not-sure' | 'gk' | 'defender' | 'midfielder' | 'forward') | null;
+  secondPosition?: ('gk' | 'defender' | 'midfielder' | 'forward') | null;
+  shirtNumber?: number | null;
+  previousClub?: string | null;
+  emergency?: {
+    name?: string | null;
+    relationship?: string | null;
+    phone?: string | null;
+  };
+  medical?: string | null;
+  /**
+   * Private documents (ID, consent forms). Never public.
+   */
+  documents?: (number | PlayerDocument)[] | null;
+  /**
+   * Shown to the player on their account page when the status is “Changes requested”.
+   */
+  changesRequested?: string | null;
+  /**
+   * The player’s reply when they resubmitted.
+   */
+  playerResponse?: string | null;
+  resubmittedAt?: string | null;
+  reviewNotes?: string | null;
+  /**
+   * Required to reject. Not shown to the player.
+   */
+  rejectionReason?: string | null;
+  reviewedBy?: (number | null) | User;
+  reviewedAt?: string | null;
+  approvedBy?: (number | null) | User;
+  approvedAt?: string | null;
+  submittedBy?: (number | null) | User;
+  isMinor?: boolean | null;
+  guardianConsent?: boolean | null;
+  /**
+   * Committee member confirmed the player or guardian agreed.
+   */
+  committeeConfirmed?: boolean | null;
+  consent: boolean;
+  /**
+   * Prefer archiving to deleting: the record stays as history.
+   */
+  archived?: boolean | null;
+  fingerprint?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Committee, conservator and mentor powers come from active appointments (Committee → Appointments), not from this page.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Super Admin has full authority. Content editors manage matches, gallery and sponsors. Players and Members sign in at /login and use their account page. The Secretary can only give Player or Member.
+   */
+  roles?: ('super-admin' | 'editor' | 'player' | 'member')[] | null;
+  /**
+   * Set automatically from active committee, conservator and mentor appointments.
+   */
+  positions?:
+    | ('president' | 'vice-president' | 'secretary' | 'joint-secretary' | 'treasurer' | 'conservator' | 'mentor')[]
+    | null;
+  /**
+   * A disabled account cannot sign in and has no access.
+   */
+  accountStatus: 'active' | 'disabled';
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * What the public sees on the Squad pages. Only “Published” profiles appear.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "players".
  */
 export interface Player {
@@ -371,56 +574,302 @@ export interface Player {
    * Show on the home page (4–6 players).
    */
   featured?: boolean | null;
+  /**
+   * Approval does not publish. Set “Published” when the public fields and photo are approved.
+   */
+  publicationStatus: 'draft' | 'pending_publication' | 'published' | 'unpublished';
+  /**
+   * The private record this profile comes from. Required before publishing new players.
+   */
+  record?: (number | null) | Registration;
+  publishedAt?: string | null;
+  publishedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "staff".
+ * via the `definition` "registration-photos".
  */
-export interface Staff {
+export interface RegistrationPhoto {
+  id: number;
+  alt?: string | null;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumb?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "player-documents".
+ */
+export interface PlayerDocument {
+  id: number;
+  title: string;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members".
+ */
+export interface Member {
+  id: number;
+  fullName: string;
+  membershipType?: ('playing' | 'non-playing' | 'honorary') | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  joinedOn?: string | null;
+  renewalDue?: string | null;
+  membershipStatus: 'pending' | 'active' | 'suspended' | 'inactive';
+  /**
+   * The member’s own account, so they can see this record at /account.
+   */
+  user?: (number | null) | User;
+  /**
+   * If this member is also a registered player.
+   */
+  playerRecord?: (number | null) | Registration;
+  /**
+   * Not shown to the member.
+   */
+  notes?: string | null;
+  /**
+   * Prefer archiving to deleting: the record stays as history.
+   */
+  archived?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "announcements".
+ */
+export interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  featuredImage?: (number | null) | Media;
+  category: 'club' | 'matches' | 'training' | 'registration' | 'events';
+  status: 'draft' | 'published' | 'unpublished';
+  publishedAt?: string | null;
+  /**
+   * Optional. Hidden from the public after this time.
+   */
+  expiresAt?: string | null;
+  createdBy?: (number | null) | User;
+  lastModifiedBy?: (number | null) | User;
+  publishedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Closing balance must equal opening balance + income − expenses.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "financial-summaries".
+ */
+export interface FinancialSummary {
+  id: number;
+  /**
+   * e.g. “April 2026” or “Season 2026–27, Q1”.
+   */
+  period: string;
+  periodStart: string;
+  periodEnd: string;
+  /**
+   * ₹
+   */
+  openingBalance: number;
+  /**
+   * ₹
+   */
+  totalIncome: number;
+  /**
+   * ₹
+   */
+  totalExpenses: number;
+  /**
+   * ₹
+   */
+  closingBalance: number;
+  notes?: string | null;
+  /**
+   * Where the supporting papers are kept (e.g. “Treasurer file, April 2026”). Do not paste bank details.
+   */
+  supportingReference?: string | null;
+  createdBy?: (number | null) | User;
+  updatedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The five committee positions. Managed by the President, Vice President and Super Admin.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "committee-members".
+ */
+export interface CommitteeMember {
   id: number;
   name: string;
-  role: string;
-  photo?: (number | null) | Media;
-  bio?: string | null;
+  position: 'president' | 'vice-president' | 'secretary' | 'joint-secretary' | 'treasurer';
   /**
    * Lower numbers show first.
    */
   order?: number | null;
+  /**
+   * Ending an appointment removes its permissions straight away. The record stays as history.
+   */
+  status: 'active' | 'ended';
+  /**
+   * The account that gets this position’s permissions. Leave empty for a public listing only.
+   */
+  user?: (number | null) | User;
+  startDate?: string | null;
+  endDate?: string | null;
+  photo?: (number | null) | Media;
+  /**
+   * Public biography (optional).
+   */
+  bio?: string | null;
+  /**
+   * Private: vacancy and handover notes for the next holder.
+   */
+  handoverNotes?: string | null;
+  appointedBy?: (number | null) | User;
+  endedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Only real partners. A sponsor appears on the site only when "Permission on file" is ticked.
+ * Three conservator positions with read-only oversight of player data and finances.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "sponsors".
+ * via the `definition` "conservators".
  */
-export interface Sponsor {
+export interface Conservator {
   id: number;
   name: string;
   /**
-   * SVG preferred; PNG at least 600 px wide. Without a logo the name is shown.
+   * Ending an appointment removes its permissions straight away. The record stays as history.
    */
-  logo?: (number | null) | Media;
+  status: 'active' | 'ended';
   /**
-   * Tick if the logo only works on a white background.
+   * The account that gets this position’s permissions. Leave empty for a public listing only.
    */
-  logoOnWhite?: boolean | null;
+  user?: (number | null) | User;
+  startDate?: string | null;
+  endDate?: string | null;
+  photo?: (number | null) | Media;
   /**
-   * Sponsor's website (https://…).
+   * Public biography (optional).
    */
-  url?: string | null;
+  bio?: string | null;
   /**
-   * Optional, only if the club defines tiers.
+   * Private: vacancy and handover notes for the next holder.
    */
-  tier?: string | null;
+  handoverNotes?: string | null;
+  appointedBy?: (number | null) | User;
+  endedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Two committee mentor positions. They advise the committee and have read-only access.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mentors".
+ */
+export interface Mentor {
+  id: number;
+  name: string;
   /**
-   * Written permission to display the logo.
+   * Ending an appointment removes its permissions straight away. The record stays as history.
    */
-  permissionOnFile?: boolean | null;
-  order?: number | null;
+  status: 'active' | 'ended';
+  /**
+   * The account that gets this position’s permissions. Leave empty for a public listing only.
+   */
+  user?: (number | null) | User;
+  startDate?: string | null;
+  endDate?: string | null;
+  photo?: (number | null) | Media;
+  /**
+   * Public biography (optional).
+   */
+  bio?: string | null;
+  /**
+   * Private: vacancy and handover notes for the next holder.
+   */
+  handoverNotes?: string | null;
+  appointedBy?: (number | null) | User;
+  endedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Every approval, publication, deletion, role change and finance update. Read-only.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs".
+ */
+export interface AuditLog {
+  id: number;
+  action:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'approve'
+    | 'reject'
+    | 'request-changes'
+    | 'status-change'
+    | 'resubmit'
+    | 'publish'
+    | 'unpublish'
+    | 'role-change'
+    | 'appoint'
+    | 'end-appointment'
+    | 'finance-update'
+    | 'invite';
+  targetCollection: string;
+  recordId?: string | null;
+  recordLabel?: string | null;
+  actor?: (number | null) | User;
+  actorName?: string | null;
+  actorRoles?: string | null;
+  summary?: string | null;
+  reason?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -461,89 +910,6 @@ export interface Application {
   createdAt: string;
 }
 /**
- * Season registrations from the Register page. Medical and emergency details are private: share only with coaches and first-aid staff.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "registrations".
- */
-export interface Registration {
-  id: number;
-  status: 'new' | 'approved' | 'needs-info' | 'declined';
-  mode: 'player' | 'committee';
-  registeredBy?: {
-    name?: string | null;
-    role?: ('secretary' | 'coach' | 'team-manager' | 'treasurer' | 'other') | null;
-    phone?: string | null;
-  };
-  fullName: string;
-  dateOfBirth: string;
-  phone?: string | null;
-  email?: string | null;
-  address: string;
-  photo?: (number | null) | RegistrationPhoto;
-  guardian?: {
-    name?: string | null;
-    phone?: string | null;
-  };
-  team?: ('unassigned' | 'senior' | 'youth') | null;
-  foot?: ('right' | 'left' | 'both') | null;
-  position?: ('not-sure' | 'gk' | 'defender' | 'midfielder' | 'forward') | null;
-  secondPosition?: ('gk' | 'defender' | 'midfielder' | 'forward') | null;
-  shirtNumber?: number | null;
-  previousClub?: string | null;
-  emergency?: {
-    name?: string | null;
-    relationship?: string | null;
-    phone?: string | null;
-  };
-  medical?: string | null;
-  isMinor?: boolean | null;
-  guardianConsent?: boolean | null;
-  /**
-   * Committee member confirmed the player or guardian agreed.
-   */
-  committeeConfirmed?: boolean | null;
-  consent: boolean;
-  /**
-   * Internal notes.
-   */
-  notes?: string | null;
-  fingerprint?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "registration-photos".
- */
-export interface RegistrationPhoto {
-  id: number;
-  alt?: string | null;
-  prefix?: string | null;
-  _objectKey?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-  sizes?: {
-    thumb?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-  };
-}
-/**
  * Messages from the Contact and Sponsors pages.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -566,37 +932,6 @@ export interface Enquiry {
   fingerprint?: string | null;
   updatedAt: string;
   createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  name?: string | null;
-  /**
-   * Admins manage everything including users. Editors manage content and the inbox.
-   */
-  role: 'admin' | 'editor';
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -803,10 +1138,6 @@ export interface PayloadLockedDocument {
         value: number | Match;
       } | null)
     | ({
-        relationTo: 'players';
-        value: number | Player;
-      } | null)
-    | ({
         relationTo: 'staff';
         value: number | Staff;
       } | null)
@@ -823,16 +1154,52 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'applications';
-        value: number | Application;
-      } | null)
-    | ({
         relationTo: 'registrations';
         value: number | Registration;
       } | null)
     | ({
+        relationTo: 'players';
+        value: number | Player;
+      } | null)
+    | ({
+        relationTo: 'members';
+        value: number | Member;
+      } | null)
+    | ({
         relationTo: 'registration-photos';
         value: number | RegistrationPhoto;
+      } | null)
+    | ({
+        relationTo: 'player-documents';
+        value: number | PlayerDocument;
+      } | null)
+    | ({
+        relationTo: 'announcements';
+        value: number | Announcement;
+      } | null)
+    | ({
+        relationTo: 'financial-summaries';
+        value: number | FinancialSummary;
+      } | null)
+    | ({
+        relationTo: 'committee-members';
+        value: number | CommitteeMember;
+      } | null)
+    | ({
+        relationTo: 'conservators';
+        value: number | Conservator;
+      } | null)
+    | ({
+        relationTo: 'mentors';
+        value: number | Mentor;
+      } | null)
+    | ({
+        relationTo: 'audit-logs';
+        value: number | AuditLog;
+      } | null)
+    | ({
+        relationTo: 'applications';
+        value: number | Application;
       } | null)
     | ({
         relationTo: 'enquiries';
@@ -917,38 +1284,6 @@ export interface MatchesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "players_select".
- */
-export interface PlayersSelect<T extends boolean = true> {
-  fullName?: T;
-  shirtNumber?: T;
-  position?: T;
-  slug?: T;
-  squadRole?: T;
-  guestAppearances?: T;
-  guestEvent?: T;
-  consentOnFile?: T;
-  photo?: T;
-  bio?: T;
-  dateOfBirth?: T;
-  showAge?: T;
-  nationality?: T;
-  stats?:
-    | T
-    | {
-        appearances?: T;
-        goals?: T;
-        assists?: T;
-      };
-  socialHandle?: T;
-  gallery?: T;
-  isActive?: T;
-  featured?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1057,39 +1392,13 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "applications_select".
- */
-export interface ApplicationsSelect<T extends boolean = true> {
-  status?: T;
-  fullName?: T;
-  dateOfBirth?: T;
-  phone?: T;
-  email?: T;
-  preferredPosition?: T;
-  experienceLevel?: T;
-  previousClub?: T;
-  preferredTrialDate?: T;
-  message?: T;
-  guardian?:
-    | T
-    | {
-        name?: T;
-        phone?: T;
-      };
-  isMinor?: T;
-  guardianConsent?: T;
-  consent?: T;
-  notes?: T;
-  fingerprint?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "registrations_select".
  */
 export interface RegistrationsSelect<T extends boolean = true> {
-  status?: T;
+  applicationStatus?: T;
+  membershipStatus?: T;
+  user?: T;
+  publicProfile?: T;
   mode?: T;
   registeredBy?:
     | T
@@ -1124,12 +1433,79 @@ export interface RegistrationsSelect<T extends boolean = true> {
         phone?: T;
       };
   medical?: T;
+  documents?: T;
+  changesRequested?: T;
+  playerResponse?: T;
+  resubmittedAt?: T;
+  reviewNotes?: T;
+  rejectionReason?: T;
+  reviewedBy?: T;
+  reviewedAt?: T;
+  approvedBy?: T;
+  approvedAt?: T;
+  submittedBy?: T;
   isMinor?: T;
   guardianConsent?: T;
   committeeConfirmed?: T;
   consent?: T;
-  notes?: T;
+  archived?: T;
   fingerprint?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players_select".
+ */
+export interface PlayersSelect<T extends boolean = true> {
+  fullName?: T;
+  shirtNumber?: T;
+  position?: T;
+  slug?: T;
+  squadRole?: T;
+  guestAppearances?: T;
+  guestEvent?: T;
+  consentOnFile?: T;
+  photo?: T;
+  bio?: T;
+  dateOfBirth?: T;
+  showAge?: T;
+  nationality?: T;
+  stats?:
+    | T
+    | {
+        appearances?: T;
+        goals?: T;
+        assists?: T;
+      };
+  socialHandle?: T;
+  gallery?: T;
+  isActive?: T;
+  featured?: T;
+  publicationStatus?: T;
+  record?: T;
+  publishedAt?: T;
+  publishedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members_select".
+ */
+export interface MembersSelect<T extends boolean = true> {
+  fullName?: T;
+  membershipType?: T;
+  email?: T;
+  phone?: T;
+  address?: T;
+  joinedOn?: T;
+  renewalDue?: T;
+  membershipStatus?: T;
+  user?: T;
+  playerRecord?: T;
+  notes?: T;
+  archived?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1169,6 +1545,165 @@ export interface RegistrationPhotosSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "player-documents_select".
+ */
+export interface PlayerDocumentsSelect<T extends boolean = true> {
+  title?: T;
+  prefix?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "announcements_select".
+ */
+export interface AnnouncementsSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  featuredImage?: T;
+  category?: T;
+  status?: T;
+  publishedAt?: T;
+  expiresAt?: T;
+  createdBy?: T;
+  lastModifiedBy?: T;
+  publishedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "financial-summaries_select".
+ */
+export interface FinancialSummariesSelect<T extends boolean = true> {
+  period?: T;
+  periodStart?: T;
+  periodEnd?: T;
+  openingBalance?: T;
+  totalIncome?: T;
+  totalExpenses?: T;
+  closingBalance?: T;
+  notes?: T;
+  supportingReference?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "committee-members_select".
+ */
+export interface CommitteeMembersSelect<T extends boolean = true> {
+  name?: T;
+  position?: T;
+  order?: T;
+  status?: T;
+  user?: T;
+  startDate?: T;
+  endDate?: T;
+  photo?: T;
+  bio?: T;
+  handoverNotes?: T;
+  appointedBy?: T;
+  endedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "conservators_select".
+ */
+export interface ConservatorsSelect<T extends boolean = true> {
+  name?: T;
+  status?: T;
+  user?: T;
+  startDate?: T;
+  endDate?: T;
+  photo?: T;
+  bio?: T;
+  handoverNotes?: T;
+  appointedBy?: T;
+  endedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mentors_select".
+ */
+export interface MentorsSelect<T extends boolean = true> {
+  name?: T;
+  status?: T;
+  user?: T;
+  startDate?: T;
+  endDate?: T;
+  photo?: T;
+  bio?: T;
+  handoverNotes?: T;
+  appointedBy?: T;
+  endedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs_select".
+ */
+export interface AuditLogsSelect<T extends boolean = true> {
+  action?: T;
+  targetCollection?: T;
+  recordId?: T;
+  recordLabel?: T;
+  actor?: T;
+  actorName?: T;
+  actorRoles?: T;
+  summary?: T;
+  reason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "applications_select".
+ */
+export interface ApplicationsSelect<T extends boolean = true> {
+  status?: T;
+  fullName?: T;
+  dateOfBirth?: T;
+  phone?: T;
+  email?: T;
+  preferredPosition?: T;
+  experienceLevel?: T;
+  previousClub?: T;
+  preferredTrialDate?: T;
+  message?: T;
+  guardian?:
+    | T
+    | {
+        name?: T;
+        phone?: T;
+      };
+  isMinor?: T;
+  guardianConsent?: T;
+  consent?: T;
+  notes?: T;
+  fingerprint?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "enquiries_select".
  */
 export interface EnquiriesSelect<T extends boolean = true> {
@@ -1191,7 +1726,9 @@ export interface EnquiriesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
-  role?: T;
+  roles?: T;
+  positions?: T;
+  accountStatus?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1639,14 +2176,22 @@ export interface TaskCreateCollectionExport {
     batchSize?: number | null;
     collectionSlug:
       | 'matches'
-      | 'players'
       | 'staff'
       | 'sponsors'
       | 'posts'
       | 'media'
-      | 'applications'
       | 'registrations'
+      | 'players'
+      | 'members'
       | 'registration-photos'
+      | 'player-documents'
+      | 'announcements'
+      | 'financial-summaries'
+      | 'committee-members'
+      | 'conservators'
+      | 'mentors'
+      | 'audit-logs'
+      | 'applications'
       | 'enquiries'
       | 'users'
       | 'rate-limits'

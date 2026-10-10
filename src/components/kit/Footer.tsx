@@ -11,6 +11,7 @@ const SITE_LINKS = [
   { href: '/gallery', label: 'Gallery' },
   { href: '/about', label: 'About' },
   { href: '/sponsors', label: 'Sponsors' },
+  { href: '/announcements', label: 'Announcements' },
   { href: '/contact', label: 'Contact' },
 ]
 
@@ -67,6 +68,7 @@ export function Footer({ settings }: { settings: SiteSetting | null }) {
       <div className="xf-bottom">
         <span>© {CLUB_NAME}</span>
         <Link href="/privacy">Privacy</Link>
+        <Link href="/account">Club login</Link>
       </div>
     </footer>
   )

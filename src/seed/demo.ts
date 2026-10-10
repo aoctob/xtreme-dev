@@ -135,6 +135,7 @@ async function seed(payload: Payload) {
         position: P[pos],
         squadRole: 'squad',
         isActive: true,
+        publicationStatus: 'published',
         featured: FEATURED.includes(num),
         stats: s ? { appearances: s[0], goals: s[1], assists: s[2] } : undefined,
         // Player 9 shows the profile photo strip, as in the kit.
@@ -150,7 +151,7 @@ async function seed(payload: Payload) {
       collection: 'players',
       overrideAccess: true,
       context: ctx,
-      data: { fullName: `Guest ${i + 1}`, slug, position: P[pos], squadRole: 'guest', guestAppearances: apps, guestEvent: event, isActive: true },
+      data: { fullName: `Guest ${i + 1}`, slug, position: P[pos], squadRole: 'guest', guestAppearances: apps, guestEvent: event, isActive: true, publicationStatus: 'published' },
     })
   }
   for (const [i, role] of STAFF.entries()) {

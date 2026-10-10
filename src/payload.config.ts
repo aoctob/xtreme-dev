@@ -14,7 +14,12 @@ import { Players } from './collections/Players'
 import { Posts } from './collections/Posts'
 import { Sponsors } from './collections/Sponsors'
 import { Staff } from './collections/Staff'
-import { Registrations, RegistrationPhotos } from './collections/Registrations'
+import { Announcements } from './collections/Announcements'
+import { CommitteeMembers, Conservators, Mentors } from './collections/Appointments'
+import { AuditLogs } from './collections/AuditLogs'
+import { FinancialSummaries } from './collections/FinancialSummaries'
+import { Members } from './collections/Members'
+import { PlayerDocuments, Registrations, RegistrationPhotos } from './collections/Registrations'
 import { Applications, Enquiries, RateLimits } from './collections/Submissions'
 import { Users } from './collections/Users'
 import { JoinPage } from './globals/JoinPage'
@@ -37,14 +42,22 @@ export default buildConfig({
   },
   collections: [
     Matches,
-    Players,
     Staff,
     Sponsors,
     Posts,
     Media,
-    Applications,
     Registrations,
+    Players,
+    Members,
     RegistrationPhotos,
+    PlayerDocuments,
+    Announcements,
+    FinancialSummaries,
+    CommitteeMembers,
+    Conservators,
+    Mentors,
+    AuditLogs,
+    Applications,
     Enquiries,
     Users,
     RateLimits,
@@ -76,11 +89,14 @@ export default buildConfig({
       alwaysInsertFields: true,
       // Uploads go straight from the browser to Blob, avoiding the 4.5 MB function body limit on Hobby.
       clientUploads: true,
+      // Random suffixes stop anyone guessing a private file's Blob URL (spec §11.6).
+      addRandomSuffix: true,
       collections: {
         // Serve files from the Blob CDN directly instead of through a function (keeps Hobby usage low).
         media: { disablePayloadAccessControl: true },
-        // Registration photos keep access control: only signed-in staff can open them.
+        // Private files keep access control: Payload serves them only to authorised roles.
         'registration-photos': true,
+        'player-documents': true,
       },
     }),
     importExportPlugin({
@@ -88,6 +104,7 @@ export default buildConfig({
         { slug: 'applications', import: false },
         { slug: 'enquiries', import: false },
         { slug: 'registrations', import: false },
+        { slug: 'members', import: false },
       ],
     }),
   ],

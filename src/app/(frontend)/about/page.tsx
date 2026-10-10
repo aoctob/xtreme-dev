@@ -4,7 +4,7 @@ import { Reveal } from '@/components/kit/motion'
 import { Timeline } from '@/components/kit/widgets'
 import { JoinBand, PageHero, Ph, PlayerCard, Sec, SectionHead } from '@/components/kit/ui'
 import { CLUB_NAME } from '@/lib/constants'
-import { getSiteSettings, getStaff } from '@/lib/queries'
+import { getOfficials, getSiteSettings, getStaff } from '@/lib/queries'
 import { imageOf, staffVM, supply } from '@/lib/view'
 
 export const revalidate = 600
@@ -28,7 +28,7 @@ const PLACEHOLDER_TIMELINE = [
 ]
 
 export default async function AboutPage() {
-  const [s, staff] = await Promise.all([getSiteSettings(), getStaff()])
+  const [s, staff, officials] = await Promise.all([getSiteSettings(), getStaff(), getOfficials()])
   const values = s?.values?.length ? s.values.map((v) => ({ title: v.title, text: v.text || '' })) : PLACEHOLDER_VALUES
   const crew = (staff ?? []).map(staffVM)
   const timeline = s?.timeline?.length
@@ -94,6 +94,19 @@ export default async function AboutPage() {
           </div>
         </div>
       </Sec>
+
+      {(officials ?? []).length > 0 && (
+        <Sec>
+          <SectionHead eyebrow="Committee" title="Running the club" />
+          <div className="grid-squad">
+            {(officials ?? []).map((c, i) => (
+              <Reveal i={i} key={c.id}>
+                <PlayerCard variant="staff" name={c.name} position={c.role} photo={c.photo} />
+              </Reveal>
+            ))}
+          </div>
+        </Sec>
+      )}
 
       {crew.length > 0 && (
         <Sec alt>
