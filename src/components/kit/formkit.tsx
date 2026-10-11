@@ -35,7 +35,7 @@ export function useForm({
   errorEvent: string
 }) {
   const [v, setV] = useState<Values>(initial)
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<Record<string, File | null>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [submitted, setSubmitted] = useState(false)
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
@@ -44,7 +44,9 @@ export function useForm({
   const started = useRef(false)
   const summaryRef = useRef<HTMLDivElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
-  const errs: Errors = { ...validate(kind, v), ...serverErrs }
+  // Attached files count as 'file' for validation, so required uploads use the same rules.
+  const fileFlags = Object.fromEntries(Object.entries(files).map(([k, file]) => [k, file ? 'file' : '']))
+  const errs: Errors = { ...validate(kind, { ...v, ...fileFlags }), ...serverErrs }
 
   const setValue = (k: string, val: string) => {
     setV((s) => ({ ...s, [k]: val }))
@@ -58,6 +60,16 @@ export function useForm({
       started.current = true
       if (startEvent) track(startEvent)
     }
+  }
+  const setFile = (k: string, file: File | null) => {
+    setFiles((s) => ({ ...s, [k]: file }))
+    setTouched((t) => ({ ...t, [k]: true }))
+    setServerErrs((e) => {
+      if (!(k in e)) return e
+      const n = { ...e }
+      delete n[k]
+      return n
+    })
   }
   const set = (k: string) => (e: { target: { value: string } }) => setValue(k, e.target.value)
   const blur = (k: string) => () => setTouched((t) => ({ ...t, [k]: true }))
@@ -77,7 +89,7 @@ export function useForm({
     const fd = new FormData()
     Object.entries(v).forEach(([k, val]) => fd.append(k, val))
     if (honeypot) fd.append(HONEYPOT, honeypot)
-    if (file) fd.append('photo', file)
+    Object.entries(files).forEach(([k, file]) => file && fd.append(k, file))
     try {
       const res = await submitForm(kind, fd)
       if (res.status === 'success') {
@@ -103,14 +115,14 @@ export function useForm({
   }
   const reset = (keep: Values = {}) => {
     setV({ ...initial, ...keep })
-    setFile(null)
+    setFiles({})
     setTouched({})
     setSubmitted(false)
     setServerErrs({})
     setStatus('idle')
     started.current = false
   }
-  return { v, set, setValue, blur, err, errs, submit, status, submitted, summaryRef, boxRef, reset, labels, file, setFile, errorMessage }
+  return { v, set, setValue, blur, err, errs, submit, status, submitted, summaryRef, boxRef, reset, labels, files, setFile, errorMessage }
 }
 
 /* --------------------------------- Fields --------------------------------- */

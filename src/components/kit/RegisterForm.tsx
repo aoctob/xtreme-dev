@@ -2,8 +2,28 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { COMMITTEE_ROLES, FEET, labelFor, PREFERRED_POSITIONS, TEAMS } from '@/lib/constants'
-import { ageOf, isMinor, LIMITS, PHOTO_MAX_BYTES, PHOTO_TYPES } from '@/lib/validation'
+import {
+  BACHELOR_DEGREES,
+  BLOOD_GROUPS,
+  COMMITTEE_ROLES,
+  FEET,
+  labelFor,
+  MASTER_DEGREES,
+  PREFERRED_POSITIONS,
+  TEAMS,
+} from '@/lib/constants'
+import { shrinkImage } from '@/lib/shrinkImage'
+import {
+  ageOf,
+  IMAGE_PICK_MAX_BYTES,
+  isChecked,
+  isMinor,
+  LIMITS,
+  maskAadhaar,
+  maskPan,
+  PHOTO_MAX_BYTES,
+  PHOTO_TYPES,
+} from '@/lib/validation'
 import { Icon } from './Icon'
 import {
   Consent,
@@ -29,8 +49,10 @@ const LABELS: Record<string, string> = {
   regPhone: 'Your phone',
   fullName: 'Player full name',
   dateOfBirth: 'Date of birth',
-  phone: 'Player phone',
-  email: 'Player email',
+  phone: 'Calling number',
+  whatsapp: 'WhatsApp number',
+  email: 'Email address',
+  bloodGroup: 'Blood group',
   address: 'Home address',
   photo: 'Player photo',
   guardianName: 'Parent/guardian name',
@@ -40,19 +62,38 @@ const LABELS: Record<string, string> = {
   emergencyRelationship: 'Relationship',
   emergencyPhone: 'Emergency contact phone',
   shirtNumber: 'Shirt number',
+  schoolName: 'School name',
+  bachelorDegree: 'Bachelor’s degree',
+  bachelorCollege: 'Bachelor’s college',
+  masterDegree: 'Master’s degree',
+  masterCollege: 'Master’s college',
+  otherQualifications: 'Other qualifications',
+  aadhaarNumber: 'Aadhaar number',
+  aadhaarImage: 'Aadhaar card image',
+  panNumber: 'PAN',
+  panImage: 'PAN card image',
   confirm: 'Committee confirmation',
   consent: 'Privacy Policy',
 }
 
+/** Digits, spaces and a leading +, so "+91 98765 43210" still fits. */
+const maskPhone = (v: string) => v.replace(/[^\d+ ]/g, '').replace(/(?!^)\+/g, '').slice(0, 16)
+
 const opts = (list: readonly Option[]): Option[] => list.map(({ label, value }) => ({ label, value }))
 const POSITION_OPTS = opts(PREFERRED_POSITIONS)
 const SECOND_OPTS: Option[] = [{ label: 'None', value: 'none' }, ...POSITION_OPTS.filter((p) => p.value !== 'not-sure')]
+const BLOOD_OPTS: Option[] = [{ label: 'Choose…', value: '' }, ...opts(BLOOD_GROUPS)]
+const BACHELOR_OPTS: Option[] = [{ label: 'None / not applicable', value: '' }, ...opts(BACHELOR_DEGREES)]
+const MASTER_OPTS: Option[] = [{ label: 'None / not applicable', value: '' }, ...opts(MASTER_DEGREES)]
 
 const BLANK = {
   fullName: '',
   dateOfBirth: '',
   phone: '',
+  whatsapp: '',
+  whatsappSame: 'true',
   email: '',
+  bloodGroup: '',
   address: '',
   guardianName: '',
   guardianPhone: '',
@@ -67,6 +108,14 @@ const BLANK = {
   emergencyRelationship: '',
   emergencyPhone: '',
   medical: '',
+  schoolName: '',
+  bachelorDegree: '',
+  bachelorCollege: '',
+  masterDegree: '',
+  masterCollege: '',
+  otherQualifications: '',
+  aadhaarNumber: '',
+  panNumber: '',
   confirm: '',
   consent: '',
 }
@@ -89,12 +138,24 @@ function Part({ n, title, desc, children }: { n: number; title: string; desc?: s
   )
 }
 
-function PhotoDrop({ f }: { f: Form }) {
+type DropProps = {
+  f: Form
+  k: string
+  label: string
+  help: string
+  required?: boolean
+  /** Round thumbnail for a face photo, card-shaped for documents. */
+  doc?: boolean
+}
+
+/** Drag-and-drop image picker. Images are shrunk in the browser before they are sent. */
+function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
   const ref = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [problem, setProblem] = useState('')
-  const p = f.file
+  const p = f.files[k] ?? null
   useEffect(() => {
     if (!p) {
       setPreview(null)
@@ -104,24 +165,40 @@ function PhotoDrop({ f }: { f: Form }) {
     setPreview(url)
     return () => URL.revokeObjectURL(url)
   }, [p])
-  const take = (file?: File | null) => {
+  const take = async (file?: File | null) => {
     if (!file) return
     if (!PHOTO_TYPES.includes(file.type)) return setProblem('Use a JPG, PNG or WebP image')
-    if (file.size > PHOTO_MAX_BYTES) return setProblem('Use an image under 4 MB')
+    if (file.size > IMAGE_PICK_MAX_BYTES) return setProblem('Use an image under 15 MB')
     setProblem('')
-    f.setFile(file)
+    setBusy(true)
+    try {
+      const small = await shrinkImage(file)
+      if (small.size > PHOTO_MAX_BYTES) return setProblem('This image is too detailed to send. Try a smaller photo or a screenshot.')
+      f.setFile(k, small)
+    } catch {
+      setProblem('This image could not be read. Try a JPG or PNG.')
+    } finally {
+      setBusy(false)
+    }
   }
-  const e = problem || f.err('photo')
+  const e = problem || f.err(k)
+  const verb = doc ? 'image' : 'photo'
   return (
     <div className="fld">
-      <span className="lbl-t">Player photo</span>
-      <span className="lbl-h">Optional. Head and shoulders, plain background. Used on the squad page only if the player agrees.</span>
+      <span className="lbl-t">
+        {label}
+        {required && ' (required)'}
+      </span>
+      <span className="lbl-h">{help}</span>
       <div
-        id="f-photo"
-        className={'pdrop' + (over ? ' over' : '') + (p ? ' has' : '')}
+        id={'f-' + k}
+        className={'pdrop' + (over ? ' over' : '') + (p ? ' has' : '') + (e ? ' bad' : '')}
         role="button"
         tabIndex={0}
-        aria-label={p ? `Photo selected: ${p.name}. Click to replace` : 'Add a player photo'}
+        aria-label={p ? `${label} selected: ${p.name}. Click to replace` : `Add ${label.toLowerCase()}`}
+        aria-invalid={e ? true : undefined}
+        aria-describedby={e ? 'e-' + k : undefined}
+        aria-busy={busy || undefined}
         onClick={() => ref.current?.click()}
         onKeyDown={(ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') {
@@ -137,13 +214,13 @@ function PhotoDrop({ f }: { f: Form }) {
         onDrop={(ev) => {
           ev.preventDefault()
           setOver(false)
-          take(ev.dataTransfer.files[0])
+          void take(ev.dataTransfer.files[0])
         }}
       >
         {p && preview ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="" className="pdrop-img" />
+            <img src={preview} alt="" className={'pdrop-img' + (doc ? ' doc' : '')} />
             <span className="pdrop-t">
               <span>{p.name}</span>
               <span className="caption">Click to replace</span>
@@ -151,10 +228,10 @@ function PhotoDrop({ f }: { f: Form }) {
             <button
               type="button"
               className="fb-x"
-              aria-label="Remove photo"
+              aria-label={`Remove ${label.toLowerCase()}`}
               onClick={(ev) => {
                 ev.stopPropagation()
-                f.setFile(null)
+                f.setFile(k, null)
                 if (ref.current) ref.current.value = ''
               }}
             >
@@ -164,18 +241,24 @@ function PhotoDrop({ f }: { f: Form }) {
         ) : (
           <>
             <span className="pdrop-ic">
-              <Icon name="upload" size={24} color="var(--color-primary-ink)" />
+              <Icon name={busy ? 'loader-2' : 'upload'} size={24} color="var(--color-primary-ink)" />
             </span>
             <span className="pdrop-t">
-              <span>Drop a photo or browse</span>
-              <span className="caption">JPG or PNG, up to 4 MB</span>
+              <span>{busy ? 'Preparing image…' : `Drop a ${verb} or browse`}</span>
+              <span className="caption">JPG, PNG or WebP</span>
             </span>
           </>
         )}
-        <input ref={ref} type="file" accept={PHOTO_TYPES.join(',')} hidden onChange={(ev) => take(ev.target.files?.[0])} />
+        <input
+          ref={ref}
+          type="file"
+          accept={PHOTO_TYPES.join(',')}
+          hidden
+          onChange={(ev) => void take(ev.target.files?.[0])}
+        />
       </div>
       {e && (
-        <span className="ferr">
+        <span id={'e-' + k} className="ferr">
           <Icon name="alert-circle" size={16} />
           {e}
         </span>
@@ -202,12 +285,17 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
     ...(cm ? ['regName', 'regPhone'] : []),
     'fullName',
     'dateOfBirth',
-    ...(!minor && !cm ? ['phone'] : []),
+    ...(!minor && !cm ? ['phone', ...(isChecked(f.v.whatsappSame) ? [] : ['whatsapp'])] : []),
+    'email',
+    'bloodGroup',
     'address',
     ...(minor ? ['guardianName', 'guardianPhone', 'guardianConsent'] : []),
     'emergencyName',
     'emergencyRelationship',
     'emergencyPhone',
+    'aadhaarNumber',
+    'aadhaarImage',
+    ...(minor ? [] : ['panNumber', 'panImage']),
     ...(cm ? ['confirm'] : []),
     'consent',
   ]
@@ -255,6 +343,7 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
               ['map-pin', 'Home address'],
               ['phone', 'An emergency contact'],
               ['shield', 'Guardian details, if under 18'],
+              ['file-text', 'Aadhaar card, and PAN card if 18 or over'],
               ['image', 'A photo (optional)'],
             ] as const
           ).map(([ic, t], i) => (
@@ -286,7 +375,7 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
                   ]
                 : [
                     'The club secretary checks your details.',
-                    'You get a confirmation message with your registration number.',
+                    'Once approved, you get your Player ID (like xfc-26-0001) on your account page.',
                     'Bring your kit to the next training session.',
                   ]
             }
@@ -339,6 +428,10 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
               <h2 className="h3">{cm ? 'Register a player' : 'Register as a player'}</h2>
               <Progress f={f} keys={req} />
             </div>
+            <p className="caption" style={{ margin: 0 }}>
+              <Icon name="info" size={16} /> Your Player ID (like <span className="tnum">xfc-26-0001</span>) is given when the club approves
+              the registration.
+            </p>
             <ErrorSummary f={f} />
             <ErrorBanner f={f} what="registration" contact={contact} />
 
@@ -366,21 +459,62 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
                   autoComplete={cm ? 'off' : 'bday'}
                   max={new Date().toISOString().slice(0, 10)}
                 />
+                <SelectField f={f} k="bloodGroup" label="Blood group" required options={BLOOD_OPTS} />
+              </div>
+              <div className="frow">
                 <TextField
                   f={f}
                   k="phone"
-                  label="Player phone"
+                  label="Calling number"
                   type="tel"
                   required={!minor && !cm}
                   help={minor || cm ? 'Optional' : undefined}
                   placeholder="98765 43210"
                   autoComplete={cm ? 'off' : 'tel'}
                   inputMode="tel"
+                  maxLength={16}
+                  transform={maskPhone}
                 />
+                {isChecked(f.v.whatsappSame) ? (
+                  <div className="fld">
+                    <span className="lbl-t">WhatsApp number</span>
+                    <span className="lbl-h">Same as the calling number</span>
+                  </div>
+                ) : (
+                  <TextField
+                    f={f}
+                    k="whatsapp"
+                    label="WhatsApp number"
+                    type="tel"
+                    required={!minor && !cm}
+                    help={minor || cm ? 'Optional' : undefined}
+                    placeholder="98765 43210"
+                    autoComplete="off"
+                    inputMode="tel"
+                    maxLength={16}
+                    transform={maskPhone}
+                  />
+                )}
               </div>
-              <TextField f={f} k="email" label="Player email" type="email" help="Optional" autoComplete={cm ? 'off' : 'email'} inputMode="email" />
+              <Consent f={f} k="whatsappSame" label="WhatsApp is on the same number as calls." />
+              <TextField
+                f={f}
+                k="email"
+                label="Email address"
+                type="email"
+                required
+                help={minor ? 'The player’s or a parent’s email' : undefined}
+                autoComplete={cm ? 'off' : 'email'}
+                inputMode="email"
+                maxLength={LIMITS.email}
+              />
               <TextField f={f} k="address" label="Home address" required autoComplete={cm ? 'off' : 'street-address'} maxLength={LIMITS.address} />
-              <PhotoDrop f={f} />
+              <ImageDrop
+                f={f}
+                k="photo"
+                label="Player photo"
+                help="Optional. Head and shoulders, plain background. Used on the squad page only if the player agrees."
+              />
             </Part>
 
             <div className={'reveal-rows' + (minor ? ' o' : '')} aria-hidden={!minor}>
@@ -392,7 +526,7 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
                   </div>
                   <div className="frow">
                     <TextField f={f} k="guardianName" label="Parent/guardian name" required autoComplete="off" />
-                    <TextField f={f} k="guardianPhone" label="Parent/guardian phone" type="tel" required inputMode="tel" />
+                    <TextField f={f} k="guardianPhone" label="Parent/guardian phone" type="tel" required inputMode="tel" maxLength={16} transform={maskPhone} />
                   </div>
                   <Consent
                     f={f}
@@ -426,12 +560,73 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
               </div>
             </Part>
 
+            <Part
+              n={++n}
+              title="Identity documents"
+              desc="Kept private. Seen only by the Secretary and senior committee, never shown on the website."
+            >
+              <div className="frow">
+                <TextField
+                  f={f}
+                  k="aadhaarNumber"
+                  label="Aadhaar number"
+                  required
+                  placeholder="XXXX XXXX XXXX"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  maxLength={14}
+                  transform={maskAadhaar}
+                />
+                <TextField
+                  f={f}
+                  k="panNumber"
+                  label="PAN"
+                  required={!minor}
+                  help={minor ? 'Optional for under-18s' : '10 characters, like ABCPE1234F'}
+                  placeholder="ABCPE1234F"
+                  autoComplete="off"
+                  maxLength={10}
+                  transform={maskPan}
+                />
+              </div>
+              <div className="frow">
+                <ImageDrop f={f} k="aadhaarImage" label="Aadhaar card image" help="Front side, all four corners visible." required doc />
+                <ImageDrop
+                  f={f}
+                  k="panImage"
+                  label="PAN card image"
+                  help={minor ? 'Optional for under-18s.' : 'Front side, all four corners visible.'}
+                  required={!minor}
+                  doc
+                />
+              </div>
+            </Part>
+
+            <Part n={++n} title="Education" desc="All optional.">
+              <TextField f={f} k="schoolName" label="School name" help="Optional" maxLength={LIMITS.school} />
+              <div className="frow">
+                <SelectField f={f} k="bachelorDegree" label="Bachelor’s degree" options={BACHELOR_OPTS} />
+                <TextField f={f} k="bachelorCollege" label="College name" help="Optional" maxLength={LIMITS.school} />
+              </div>
+              <div className="frow">
+                <SelectField f={f} k="masterDegree" label="Master’s degree" options={MASTER_OPTS} />
+                <TextField f={f} k="masterCollege" label="College name" help="Optional" maxLength={LIMITS.school} />
+              </div>
+              <TextAreaField
+                f={f}
+                k="otherQualifications"
+                label="Other qualifications"
+                help="Optional. Diplomas, certificates, coaching or refereeing licences."
+                maxLength={LIMITS.otherQualifications}
+              />
+            </Part>
+
             <Part n={++n} title="Emergency and medical" desc="Kept private. Shared only with coaches and first-aid staff.">
               <div className="frow">
                 <TextField f={f} k="emergencyName" label="Emergency contact name" required autoComplete="off" />
                 <TextField f={f} k="emergencyRelationship" label="Relationship" required placeholder="e.g. Mother" />
               </div>
-              <TextField f={f} k="emergencyPhone" label="Emergency contact phone" type="tel" required inputMode="tel" />
+              <TextField f={f} k="emergencyPhone" label="Emergency contact phone" type="tel" required inputMode="tel" maxLength={16} transform={maskPhone} />
               <TextAreaField f={f} k="medical" label="Medical conditions, allergies or injuries" help="Optional" maxLength={LIMITS.medical} />
             </Part>
 

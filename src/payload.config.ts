@@ -19,7 +19,7 @@ import { CommitteeMembers, Conservators, Mentors } from './collections/Appointme
 import { AuditLogs } from './collections/AuditLogs'
 import { FinancialSummaries } from './collections/FinancialSummaries'
 import { Members } from './collections/Members'
-import { PlayerDocuments, Registrations, RegistrationPhotos } from './collections/Registrations'
+import { PlayerDocuments, PlayerIdSequences, Registrations, RegistrationPhotos } from './collections/Registrations'
 import { Applications, Enquiries, RateLimits } from './collections/Submissions'
 import { Users } from './collections/Users'
 import { JoinPage } from './globals/JoinPage'
@@ -51,6 +51,7 @@ export default buildConfig({
     Members,
     RegistrationPhotos,
     PlayerDocuments,
+    PlayerIdSequences,
     Announcements,
     FinancialSummaries,
     CommitteeMembers,

@@ -77,6 +77,7 @@ export interface Config {
     members: Member;
     'registration-photos': RegistrationPhoto;
     'player-documents': PlayerDocument;
+    'player-id-sequences': PlayerIdSequence;
     announcements: Announcement;
     'financial-summaries': FinancialSummary;
     'committee-members': CommitteeMember;
@@ -111,6 +112,7 @@ export interface Config {
     members: MembersSelect<false> | MembersSelect<true>;
     'registration-photos': RegistrationPhotosSelect<false> | RegistrationPhotosSelect<true>;
     'player-documents': PlayerDocumentsSelect<false> | PlayerDocumentsSelect<true>;
+    'player-id-sequences': PlayerIdSequencesSelect<false> | PlayerIdSequencesSelect<true>;
     announcements: AnnouncementsSelect<false> | AnnouncementsSelect<true>;
     'financial-summaries': FinancialSummariesSelect<false> | FinancialSummariesSelect<true>;
     'committee-members': CommitteeMembersSelect<false> | CommitteeMembersSelect<true>;
@@ -388,6 +390,10 @@ export interface Sponsor {
  */
 export interface Registration {
   id: number;
+  /**
+   * Given automatically when the registration is first approved (xfc-YY-0001). Never reused.
+   */
+  playerId?: string | null;
   applicationStatus: 'pending' | 'under_review' | 'changes_requested' | 'approved' | 'rejected';
   membershipStatus?: ('pending' | 'active' | 'suspended' | 'inactive') | null;
   /**
@@ -411,7 +417,12 @@ export interface Registration {
   fullName: string;
   dateOfBirth: string;
   phone?: string | null;
+  whatsapp?: string | null;
+  /**
+   * Required for new registrations.
+   */
   email?: string | null;
+  bloodGroup?: ('a-pos' | 'a-neg' | 'b-pos' | 'b-neg' | 'ab-pos' | 'ab-neg' | 'o-pos' | 'o-neg' | 'unknown') | null;
   address: string;
   photo?: (number | null) | RegistrationPhoto;
   guardian?: {
@@ -431,7 +442,75 @@ export interface Registration {
   };
   medical?: string | null;
   /**
-   * Private documents (ID, consent forms). Never public.
+   * All optional.
+   */
+  education?: {
+    schoolName?: string | null;
+    bachelors?: {
+      degree?:
+        | (
+            | 'ba'
+            | 'bsc'
+            | 'bcom'
+            | 'bba'
+            | 'bca'
+            | 'btech'
+            | 'barch'
+            | 'bped'
+            | 'bed'
+            | 'llb'
+            | 'mbbs'
+            | 'ayush'
+            | 'bpharm'
+            | 'nursing'
+            | 'bhm'
+            | 'bfa'
+            | 'bsw'
+            | 'bvoc'
+            | 'other'
+          )
+        | null;
+      college?: string | null;
+    };
+    masters?: {
+      degree?:
+        | (
+            | 'ma'
+            | 'msc'
+            | 'mcom'
+            | 'mba'
+            | 'mca'
+            | 'mtech'
+            | 'march'
+            | 'mped'
+            | 'med'
+            | 'llm'
+            | 'md'
+            | 'mpharm'
+            | 'mpt'
+            | 'mfa'
+            | 'msw'
+            | 'other'
+          )
+        | null;
+      college?: string | null;
+    };
+    /**
+     * Diplomas, certificates, coaching or refereeing licences.
+     */
+    other?: string | null;
+  };
+  /**
+   * Aadhaar and PAN. Private: never on the public profile, and hidden from the Treasurer.
+   */
+  identity?: {
+    aadhaarNumber?: string | null;
+    aadhaarImage?: (number | null) | PlayerDocument;
+    panNumber?: string | null;
+    panImage?: (number | null) | PlayerDocument;
+  };
+  /**
+   * Other private documents (consent forms, certificates). Never public.
    */
   documents?: (number | PlayerDocument)[] | null;
   /**
@@ -669,6 +748,17 @@ export interface Member {
    * Prefer archiving to deleting: the record stays as history.
    */
   archived?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "player-id-sequences".
+ */
+export interface PlayerIdSequence {
+  id: number;
+  year: number;
+  last: number;
   updatedAt: string;
   createdAt: string;
 }
@@ -1174,6 +1264,10 @@ export interface PayloadLockedDocument {
         value: number | PlayerDocument;
       } | null)
     | ({
+        relationTo: 'player-id-sequences';
+        value: number | PlayerIdSequence;
+      } | null)
+    | ({
         relationTo: 'announcements';
         value: number | Announcement;
       } | null)
@@ -1395,6 +1489,7 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "registrations_select".
  */
 export interface RegistrationsSelect<T extends boolean = true> {
+  playerId?: T;
   applicationStatus?: T;
   membershipStatus?: T;
   user?: T;
@@ -1410,7 +1505,9 @@ export interface RegistrationsSelect<T extends boolean = true> {
   fullName?: T;
   dateOfBirth?: T;
   phone?: T;
+  whatsapp?: T;
   email?: T;
+  bloodGroup?: T;
   address?: T;
   photo?: T;
   guardian?:
@@ -1433,6 +1530,32 @@ export interface RegistrationsSelect<T extends boolean = true> {
         phone?: T;
       };
   medical?: T;
+  education?:
+    | T
+    | {
+        schoolName?: T;
+        bachelors?:
+          | T
+          | {
+              degree?: T;
+              college?: T;
+            };
+        masters?:
+          | T
+          | {
+              degree?: T;
+              college?: T;
+            };
+        other?: T;
+      };
+  identity?:
+    | T
+    | {
+        aadhaarNumber?: T;
+        aadhaarImage?: T;
+        panNumber?: T;
+        panImage?: T;
+      };
   documents?: T;
   changesRequested?: T;
   playerResponse?: T;
@@ -1562,6 +1685,16 @@ export interface PlayerDocumentsSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "player-id-sequences_select".
+ */
+export interface PlayerIdSequencesSelect<T extends boolean = true> {
+  year?: T;
+  last?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2185,6 +2318,7 @@ export interface TaskCreateCollectionExport {
       | 'members'
       | 'registration-photos'
       | 'player-documents'
+      | 'player-id-sequences'
       | 'announcements'
       | 'financial-summaries'
       | 'committee-members'

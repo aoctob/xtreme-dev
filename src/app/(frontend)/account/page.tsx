@@ -97,14 +97,18 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                       {STATUS_HELP[r.applicationStatus]}
                     </p>
                     <dl className="dl">
+                      <dt>Player ID</dt>
+                      <dd className="tnum">{r.playerId || 'Given when your registration is approved'}</dd>
                       <dt>Submitted</dt>
                       <dd>{fmtDate(r.createdAt)}</dd>
                       <dt>Team</dt>
                       <dd>{labelFor(TEAMS, r.team) || '—'}</dd>
                       <dt>Position</dt>
                       <dd>{labelFor(PREFERRED_POSITIONS, r.position) || '—'}</dd>
-                      <dt>Phone</dt>
+                      <dt>Calling number</dt>
                       <dd>{r.phone || '—'}</dd>
+                      <dt>WhatsApp</dt>
+                      <dd>{r.whatsapp || '—'}</dd>
                       <dt>Email</dt>
                       <dd>{r.email || '—'}</dd>
                       {r.membershipStatus && (

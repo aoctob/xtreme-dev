@@ -122,6 +122,59 @@ export const FEET = [
   { label: 'Both', value: 'both' },
 ] as const
 
+export const BLOOD_GROUPS = [
+  { label: 'A+', value: 'a-pos' },
+  { label: 'A−', value: 'a-neg' },
+  { label: 'B+', value: 'b-pos' },
+  { label: 'B−', value: 'b-neg' },
+  { label: 'AB+', value: 'ab-pos' },
+  { label: 'AB−', value: 'ab-neg' },
+  { label: 'O+', value: 'o-pos' },
+  { label: 'O−', value: 'o-neg' },
+  { label: 'Unknown', value: 'unknown' },
+] as const
+
+export const BACHELOR_DEGREES = [
+  { label: 'B.A. (Arts)', value: 'ba' },
+  { label: 'B.Sc. (Science)', value: 'bsc' },
+  { label: 'B.Com. (Commerce)', value: 'bcom' },
+  { label: 'BBA / BBM (Business)', value: 'bba' },
+  { label: 'BCA (Computer Applications)', value: 'bca' },
+  { label: 'B.Tech. / B.E. (Engineering)', value: 'btech' },
+  { label: 'B.Arch. (Architecture)', value: 'barch' },
+  { label: 'B.P.Ed. / BPES (Physical Education)', value: 'bped' },
+  { label: 'B.Ed. (Education)', value: 'bed' },
+  { label: 'LLB / Integrated LLB (Law)', value: 'llb' },
+  { label: 'MBBS / BDS (Medicine, Dental)', value: 'mbbs' },
+  { label: 'BAMS / BHMS / BUMS (AYUSH)', value: 'ayush' },
+  { label: 'B.Pharm. (Pharmacy)', value: 'bpharm' },
+  { label: 'B.Sc. Nursing / BPT (Nursing, Physiotherapy)', value: 'nursing' },
+  { label: 'BHM (Hotel Management)', value: 'bhm' },
+  { label: 'BFA / B.Des. (Fine Arts, Design)', value: 'bfa' },
+  { label: 'BSW (Social Work)', value: 'bsw' },
+  { label: 'B.Voc. (Vocational)', value: 'bvoc' },
+  { label: 'Other bachelor’s degree', value: 'other' },
+] as const
+
+export const MASTER_DEGREES = [
+  { label: 'M.A. (Arts)', value: 'ma' },
+  { label: 'M.Sc. (Science)', value: 'msc' },
+  { label: 'M.Com. (Commerce)', value: 'mcom' },
+  { label: 'MBA / PGDM (Management)', value: 'mba' },
+  { label: 'MCA (Computer Applications)', value: 'mca' },
+  { label: 'M.Tech. / M.E. (Engineering)', value: 'mtech' },
+  { label: 'M.Arch. (Architecture)', value: 'march' },
+  { label: 'M.P.Ed. (Physical Education)', value: 'mped' },
+  { label: 'M.Ed. (Education)', value: 'med' },
+  { label: 'LLM (Law)', value: 'llm' },
+  { label: 'MD / MS / MDS (Medicine, Dental)', value: 'md' },
+  { label: 'M.Pharm. (Pharmacy)', value: 'mpharm' },
+  { label: 'MPT / M.Sc. Nursing (Physiotherapy, Nursing)', value: 'mpt' },
+  { label: 'MFA / M.Des. (Fine Arts, Design)', value: 'mfa' },
+  { label: 'MSW (Social Work)', value: 'msw' },
+  { label: 'Other master’s degree', value: 'other' },
+] as const
+
 /** Registration workflow (spec §5). Approval is separate from publication. */
 export const REGISTRATION_STATUSES = [
   { label: 'Pending', value: 'pending' },

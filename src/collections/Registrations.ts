@@ -1,4 +1,5 @@
-import { APIError, type CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig, type Field, type TextFieldSingleValidation } from 'payload'
+import { email as emailValidation } from 'payload/shared'
 import {
   allow,
   allowField,
@@ -16,14 +17,19 @@ import {
 } from '../access'
 import { auditHooks } from '../hooks/audit'
 import {
+  BACHELOR_DEGREES,
+  BLOOD_GROUPS,
   COMMITTEE_ROLES,
   FEET,
+  MASTER_DEGREES,
   MEMBERSHIP_STATUSES,
   PREFERRED_POSITIONS,
   REGISTRATION_MODES,
   REGISTRATION_STATUSES,
   TEAMS,
 } from '../lib/constants'
+import { nextPlayerId } from '../lib/playerId'
+import { isAadhaar, isPan, maskAadhaar, maskPan, normalisePhone } from '../lib/validation'
 
 const opts = (list: readonly { label: string; value: string }[]) => list.map(({ label, value }) => ({ label, value }))
 const readOnly = { readOnly: true }
@@ -33,6 +39,36 @@ const personal = { read: sensitiveOrOwner() }
 const internal = { read: allowField(canViewSensitivePlayerData) }
 /** Set only by the server when the status changes (spec §11.4). */
 const stamped = { read: allowField(canViewPlayerRecords), create: nobodyField, update: nobodyField }
+
+/** Admin text input that formats as you type (lib/validation masks). */
+const masked = (mask: 'aadhaar' | 'pan' | 'phone') => ({
+  Field: { path: '@/components/admin/MaskedTextField#MaskedTextField', clientProps: { mask } },
+})
+
+/**
+ * Rules shared with the Register form. Old records saved before a rule existed stay editable:
+ * a value is checked only when it is new or has changed.
+ */
+const unchanged = (value: unknown, previousValue: unknown) => value === previousValue
+const validPhone: TextFieldSingleValidation = (value, { previousValue }) =>
+  !value || unchanged(value, previousValue) || Boolean(normalisePhone(value)) || 'Enter a 10-digit Indian mobile number, with optional +91'
+const validAadhaar: TextFieldSingleValidation = (value, { previousValue }) =>
+  !value || unchanged(value, previousValue) || isAadhaar(value) || 'Enter a valid 12-digit Aadhaar number (XXXX XXXX XXXX)'
+const validPan: TextFieldSingleValidation = (value, { previousValue }) =>
+  !value || unchanged(value, previousValue) || isPan(value) || 'Enter a valid PAN: 5 letters, 4 digits, 1 letter (ABCPE1234F)'
+
+/** Email is required on new records; older records without one can still be edited. */
+const requiredEmail: Field = {
+  name: 'email',
+  type: 'email',
+  access: personal,
+  validate: (value, args) => {
+    const v = value as string | null | undefined
+    if (!v) return args.operation === 'create' || args.previousValue ? 'Enter an email address' : true
+    return emailValidation(v, args)
+  },
+  admin: { description: 'Required for new registrations.' },
+}
 
 const audit = auditHooks({
   label: (d) => d.fullName as string,
@@ -78,6 +114,21 @@ export const Registrations: CollectionConfig = {
   },
   defaultSort: '-createdAt',
   hooks: {
+    beforeValidate: [
+      // Store numbers in one format whichever way they were typed (form, admin or API).
+      ({ data }) => {
+        if (!data) return data
+        for (const k of ['phone', 'whatsapp'] as const)
+          if (typeof data[k] === 'string' && data[k]) data[k] = normalisePhone(data[k]) ?? data[k].trim()
+        if (typeof data.email === 'string') data.email = data.email.trim().toLowerCase() || null
+        const id = data.identity as { aadhaarNumber?: string | null; panNumber?: string | null } | undefined
+        if (id) {
+          if (typeof id.aadhaarNumber === 'string') id.aadhaarNumber = maskAadhaar(id.aadhaarNumber) || null
+          if (typeof id.panNumber === 'string') id.panNumber = maskPan(id.panNumber) || null
+        }
+        return data
+      },
+    ],
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
         const actor = req.user as RoleUser
@@ -108,6 +159,8 @@ export const Registrations: CollectionConfig = {
         if (to === 'approved') {
           data.approvedBy = actor?.id
           data.approvedAt = now
+          // Player ID is given once, on first approval, and kept if approval is later withdrawn.
+          if (!originalDoc?.playerId) data.playerId = await nextPlayerId(req)
         }
         return data
       },
@@ -140,6 +193,20 @@ export const Registrations: CollectionConfig = {
     afterDelete: audit.afterDelete,
   },
   fields: [
+    {
+      name: 'playerId',
+      label: 'Player ID',
+      type: 'text',
+      unique: true,
+      index: true,
+      access: { read: checkOrOwner(canViewPlayerRecords), create: nobodyField, update: nobodyField },
+      validate: (value: string | null | undefined) => !value || /^xfc-\d{2}-\d{4,}$/.test(value) || 'Player IDs look like xfc-26-0001',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Given automatically when the registration is first approved (xfc-YY-0001). Never reused.',
+      },
+    },
     {
       name: 'applicationStatus',
       type: 'select',
@@ -218,8 +285,28 @@ export const Registrations: CollectionConfig = {
             {
               type: 'row',
               fields: [
-                { name: 'phone', type: 'text' },
-                { name: 'email', type: 'email', access: personal },
+                {
+                  name: 'phone',
+                  label: 'Calling phone',
+                  type: 'text',
+                  validate: validPhone,
+                  admin: { placeholder: '+91 98765 43210', components: masked('phone') },
+                },
+                {
+                  name: 'whatsapp',
+                  label: 'WhatsApp number',
+                  type: 'text',
+                  access: personal,
+                  validate: validPhone,
+                  admin: { placeholder: '+91 98765 43210', components: masked('phone') },
+                },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                requiredEmail,
+                { name: 'bloodGroup', type: 'select', options: opts(BLOOD_GROUPS), access: personal },
               ],
             },
             { name: 'address', label: 'Home address', type: 'textarea', required: true, access: personal },
@@ -277,12 +364,90 @@ export const Registrations: CollectionConfig = {
             },
             { name: 'medical', label: 'Medical conditions, allergies or injuries', type: 'textarea', access: personal },
             {
+              name: 'education',
+              label: 'Educational background',
+              type: 'group',
+              access: personal,
+              admin: { description: 'All optional.' },
+              fields: [
+                { name: 'schoolName', type: 'text' },
+                {
+                  name: 'bachelors',
+                  label: 'Bachelor’s degree',
+                  type: 'group',
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        { name: 'degree', type: 'select', options: opts(BACHELOR_DEGREES) },
+                        { name: 'college', label: 'College name', type: 'text' },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  name: 'masters',
+                  label: 'Master’s degree',
+                  type: 'group',
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        { name: 'degree', type: 'select', options: opts(MASTER_DEGREES) },
+                        { name: 'college', label: 'College name', type: 'text' },
+                      ],
+                    },
+                  ],
+                },
+                { name: 'other', label: 'Other qualifications', type: 'textarea', admin: { description: 'Diplomas, certificates, coaching or refereeing licences.' } },
+              ],
+            },
+            {
+              name: 'identity',
+              label: 'Identity documents',
+              type: 'group',
+              access: personal,
+              admin: { description: 'Aadhaar and PAN. Private: never on the public profile, and hidden from the Treasurer.' },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'aadhaarNumber',
+                      type: 'text',
+                      validate: validAadhaar,
+                      admin: { placeholder: 'XXXX XXXX XXXX', components: masked('aadhaar') },
+                    },
+                    {
+                      name: 'aadhaarImage',
+                      label: 'Aadhaar card image',
+                      type: 'upload',
+                      relationTo: 'player-documents',
+                    },
+                  ],
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'panNumber',
+                      label: 'PAN',
+                      type: 'text',
+                      validate: validPan,
+                      admin: { placeholder: 'ABCPE1234F', components: masked('pan') },
+                    },
+                    { name: 'panImage', label: 'PAN card image', type: 'upload', relationTo: 'player-documents' },
+                  ],
+                },
+              ],
+            },
+            {
               name: 'documents',
               type: 'upload',
               relationTo: 'player-documents',
               hasMany: true,
               access: personal,
-              admin: { description: 'Private documents (ID, consent forms). Never public.' },
+              admin: { description: 'Other private documents (consent forms, certificates). Never public.' },
             },
           ],
         },
@@ -388,4 +553,16 @@ export const PlayerDocuments: CollectionConfig = {
   upload: {
     mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
   },
+}
+
+/** Player ID counters, one row per year. Written only by lib/playerId.ts. */
+export const PlayerIdSequences: CollectionConfig = {
+  slug: 'player-id-sequences',
+  labels: { singular: 'Player ID counter', plural: 'Player ID counters' },
+  admin: { group: 'Players and members', hidden: true },
+  access: { read: allow(isSuperAdmin), create: nobody, update: nobody, delete: nobody },
+  fields: [
+    { name: 'year', type: 'number', required: true, unique: true },
+    { name: 'last', type: 'number', required: true, defaultValue: 0 },
+  ],
 }

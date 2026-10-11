@@ -6,8 +6,11 @@ import { adminHref, Empty, Field, Flash, fmtDate, nameOf, SectionTitle, Select, 
 import { AUDIT_ACTIONS } from '@/hooks/audit'
 import { requireUser } from '@/lib/auth'
 import {
+  BACHELOR_DEGREES,
+  BLOOD_GROUPS,
   FEET,
   labelFor,
+  MASTER_DEGREES,
   MEMBERSHIP_STATUSES,
   POSITIONS,
   PREFERRED_POSITIONS,
@@ -17,7 +20,7 @@ import {
   TEAMS,
 } from '@/lib/constants'
 import { dashContext } from '@/lib/dashboard'
-import type { RegistrationPhoto } from '@/payload-types'
+import type { PlayerDocument, RegistrationPhoto } from '@/payload-types'
 import {
   inviteLogin,
   preparePublicProfile,
@@ -28,6 +31,28 @@ import {
 } from '../../actions'
 
 const PREFERRED_TO_POSITION: Record<string, string> = { gk: 'goalkeeper', defender: 'defender', midfielder: 'midfielder', forward: 'forward' }
+
+/** Number with a link to the card image, which Payload serves only to permitted roles. */
+function IdDoc({ number, image }: { number?: string | null; image?: number | PlayerDocument | null }) {
+  const doc = image && typeof image === 'object' ? image : null
+  if (!number && !doc) return null
+  return (
+    <>
+      <span className="tnum">{number || 'Number not given'}</span>
+      {doc?.url && (
+        <>
+          {' · '}
+          <a href={doc.url} target="_blank" rel="noopener noreferrer">
+            View card
+          </a>
+        </>
+      )}
+    </>
+  )
+}
+
+const degree = (list: readonly { label: string; value: string }[], d?: { degree?: string | null; college?: string | null } | null) =>
+  [labelFor(list, d?.degree ?? undefined), d?.college].filter(Boolean).join(', ')
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === undefined) return null
@@ -111,11 +136,14 @@ export default async function PlayerRecordPage({
                 <img src={photo.sizes?.thumb?.url || photo.url} alt={`Photo of ${r.fullName}`} className="dphoto" />
               )}
               <dl className="dl" style={{ flex: 1, minWidth: 260 }}>
+                <Row label="Player ID" value={r.playerId ? <span className="tnum">{r.playerId}</span> : 'Given on approval'} />
                 <Row label="Registered by" value={labelFor(REGISTRATION_MODES, r.mode)} />
                 {r.mode === 'committee' && <Row label="Committee member" value={[r.registeredBy?.name, r.registeredBy?.phone].filter(Boolean).join(' · ')} />}
                 <Row label="Date of birth" value={r.dateOfBirth === undefined ? undefined : fmtDate(r.dateOfBirth)} />
-                <Row label="Phone" value={r.phone} />
+                <Row label="Calling number" value={r.phone} />
+                <Row label="WhatsApp" value={r.whatsapp === undefined ? undefined : r.whatsapp && r.whatsapp === r.phone ? 'Same as calling number' : r.whatsapp} />
                 <Row label="Email" value={r.email} />
+                <Row label="Blood group" value={r.bloodGroup === undefined ? undefined : labelFor(BLOOD_GROUPS, r.bloodGroup ?? undefined)} />
                 <Row label="Address" value={r.address} />
                 {r.isMinor && <Row label="Guardian" value={r.guardian === undefined ? undefined : [r.guardian?.name, r.guardian?.phone].filter(Boolean).join(' · ')} />}
                 <Row label="Team" value={labelFor(TEAMS, r.team)} />
@@ -125,6 +153,20 @@ export default async function PlayerRecordPage({
                 <Row label="Previous club" value={r.previousClub} />
                 <Row label="Emergency contact" value={r.emergency === undefined ? undefined : [r.emergency?.name, r.emergency?.relationship, r.emergency?.phone].filter(Boolean).join(' · ')} />
                 <Row label="Medical" value={r.medical} />
+                {r.education !== undefined && (
+                  <>
+                    <Row label="School" value={r.education?.schoolName} />
+                    <Row label="Bachelor’s" value={degree(BACHELOR_DEGREES, r.education?.bachelors)} />
+                    <Row label="Master’s" value={degree(MASTER_DEGREES, r.education?.masters)} />
+                    <Row label="Other qualifications" value={r.education?.other} />
+                  </>
+                )}
+                {r.identity !== undefined && (
+                  <>
+                    <Row label="Aadhaar" value={r.identity?.aadhaarNumber || r.identity?.aadhaarImage ? <IdDoc number={r.identity?.aadhaarNumber} image={r.identity?.aadhaarImage} /> : null} />
+                    <Row label="PAN" value={r.identity?.panNumber || r.identity?.panImage ? <IdDoc number={r.identity?.panNumber} image={r.identity?.panImage} /> : null} />
+                  </>
+                )}
                 <Row label="Documents" value={r.documents === undefined ? undefined : `${(r.documents ?? []).length} on file`} />
                 <Row label="Submitted" value={fmtDate(r.createdAt, true)} />
               </dl>

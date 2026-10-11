@@ -11,6 +11,7 @@ export function RecordTable({ docs, empty }: { docs: Registration[]; empty: stri
         <thead>
           <tr>
             <th>Player</th>
+            <th>Player ID</th>
             <th>Team</th>
             <th>Position</th>
             <th>Submitted</th>
@@ -25,6 +26,7 @@ export function RecordTable({ docs, empty }: { docs: Registration[]; empty: stri
                 <Link href={`/dashboard/players/${r.id}`}>{r.fullName}</Link>
                 {r.archived && <span className="rtag" style={{ marginLeft: 8 }}>Archived</span>}
               </td>
+              <td className="muted tnum">{r.playerId || '—'}</td>
               <td className="muted">{labelFor(TEAMS, r.team) || '—'}</td>
               <td className="muted">{labelFor(PREFERRED_POSITIONS, r.position) || '—'}</td>
               <td className="muted">{fmtDate(r.createdAt)}</td>
