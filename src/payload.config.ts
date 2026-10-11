@@ -2,7 +2,6 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { resendAdapter } from '@payloadcms/email-resend'
 import { importExportPlugin } from '@payloadcms/plugin-import-export'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
@@ -19,6 +18,7 @@ import { CommitteeMembers, Conservators, Mentors } from './collections/Appointme
 import { AuditLogs } from './collections/AuditLogs'
 import { FinancialSummaries } from './collections/FinancialSummaries'
 import { Members } from './collections/Members'
+import { privateBlobStorage } from './lib/privateBlobStorage'
 import { PlayerDocuments, PlayerIdSequences, Registrations, RegistrationPhotos } from './collections/Registrations'
 import { Applications, Enquiries, RateLimits } from './collections/Submissions'
 import { Users } from './collections/Users'
@@ -84,20 +84,15 @@ export default buildConfig({
       }
     : {}),
   plugins: [
-    vercelBlobStorage({
-      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    // The project's Blob store has private access, so every file is served through Payload's
+    // access-checked file route (spec §11.6): Media publicly, player photos and ID cards only to
+    // permitted roles.
+    privateBlobStorage({
       token: process.env.BLOB_READ_WRITE_TOKEN,
-      alwaysInsertFields: true,
-      // Uploads go straight from the browser to Blob, avoiding the 4.5 MB function body limit on Hobby.
-      clientUploads: true,
-      // Random suffixes stop anyone guessing a private file's Blob URL (spec §11.6).
-      addRandomSuffix: true,
       collections: {
-        // Serve files from the Blob CDN directly instead of through a function (keeps Hobby usage low).
-        media: { disablePayloadAccessControl: true },
-        // Private files keep access control: Payload serves them only to authorised roles.
-        'registration-photos': true,
-        'player-documents': true,
+        media: { publicCache: true },
+        'registration-photos': {},
+        'player-documents': {},
       },
     }),
     importExportPlugin({
