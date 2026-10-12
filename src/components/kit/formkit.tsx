@@ -35,7 +35,7 @@ export function useForm({
   errorEvent: string
 }) {
   const [v, setV] = useState<Values>(initial)
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<Record<string, File | null>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [submitted, setSubmitted] = useState(false)
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
@@ -44,7 +44,9 @@ export function useForm({
   const started = useRef(false)
   const summaryRef = useRef<HTMLDivElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
-  const errs: Errors = { ...validate(kind, v), ...serverErrs }
+  // Attached files count as 'file' for validation, so required uploads use the same rules.
+  const fileFlags = Object.fromEntries(Object.entries(files).map(([k, file]) => [k, file ? 'file' : '']))
+  const errs: Errors = { ...validate(kind, { ...v, ...fileFlags }), ...serverErrs }
 
   const setValue = (k: string, val: string) => {
     setV((s) => ({ ...s, [k]: val }))
@@ -58,6 +60,16 @@ export function useForm({
       started.current = true
       if (startEvent) track(startEvent)
     }
+  }
+  const setFile = (k: string, file: File | null) => {
+    setFiles((s) => ({ ...s, [k]: file }))
+    setTouched((t) => ({ ...t, [k]: true }))
+    setServerErrs((e) => {
+      if (!(k in e)) return e
+      const n = { ...e }
+      delete n[k]
+      return n
+    })
   }
   const set = (k: string) => (e: { target: { value: string } }) => setValue(k, e.target.value)
   const blur = (k: string) => () => setTouched((t) => ({ ...t, [k]: true }))
@@ -77,7 +89,7 @@ export function useForm({
     const fd = new FormData()
     Object.entries(v).forEach(([k, val]) => fd.append(k, val))
     if (honeypot) fd.append(HONEYPOT, honeypot)
-    if (file) fd.append('photo', file)
+    Object.entries(files).forEach(([k, file]) => file && fd.append(k, file))
     try {
       const res = await submitForm(kind, fd)
       if (res.status === 'success') {
@@ -103,14 +115,14 @@ export function useForm({
   }
   const reset = (keep: Values = {}) => {
     setV({ ...initial, ...keep })
-    setFile(null)
+    setFiles({})
     setTouched({})
     setSubmitted(false)
     setServerErrs({})
     setStatus('idle')
     started.current = false
   }
-  return { v, set, setValue, blur, err, errs, submit, status, submitted, summaryRef, boxRef, reset, labels, file, setFile, errorMessage }
+  return { v, set, setValue, blur, err, errs, submit, status, submitted, summaryRef, boxRef, reset, labels, files, setFile, errorMessage }
 }
 
 /* --------------------------------- Fields --------------------------------- */
@@ -125,12 +137,25 @@ function FieldError({ id, msg }: { id: string; msg?: string }) {
   )
 }
 
+const describedBy = (k: string, note?: string, e?: string) => [note && 'n-' + k, e && 'e-' + k].filter(Boolean).join(' ') || undefined
+
+function FieldNote({ k, note }: { k: string; note?: string }) {
+  return note ? (
+    <span id={'n-' + k} className="fnote">
+      {note}
+    </span>
+  ) : null
+}
+
 type FieldProps = {
   f: Form
   k: string
   label: string
   required?: boolean
+  /** Short hint on the label line, e.g. "10 characters". Keep it short so the label stays on one line. */
   help?: string
+  /** Longer guidance, shown under the control. */
+  note?: string
   className?: string
 }
 
@@ -140,6 +165,7 @@ export function TextField({
   label,
   required,
   help,
+  note,
   type = 'text',
   placeholder,
   autoComplete,
@@ -165,25 +191,28 @@ export function TextField({
           {label}
           {required && ' (required)'}
         </span>
-        {help && <span className="lbl-h">{help}</span>}
+        {help && <> <span className="lbl-h">{help}</span></>}
       </label>
-      <input
-        id={'f-' + k}
-        name={k}
-        className="ctl"
-        type={type}
-        value={f.v[k] ?? ''}
-        onChange={(ev) => f.setValue(k, transform ? transform(ev.target.value) : ev.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        inputMode={inputMode}
-        max={max}
-        maxLength={maxLength}
-        aria-required={required || undefined}
-        aria-invalid={e ? true : undefined}
-        aria-describedby={e ? 'e-' + k : undefined}
-      />
-      <FieldError id={'e-' + k} msg={e} />
+      <div className="fld-b">
+        <input
+          id={'f-' + k}
+          name={k}
+          className="ctl"
+          type={type}
+          value={f.v[k] ?? ''}
+          onChange={(ev) => f.setValue(k, transform ? transform(ev.target.value) : ev.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          max={max}
+          maxLength={maxLength}
+          aria-required={required || undefined}
+          aria-invalid={e ? true : undefined}
+          aria-describedby={describedBy(k, note, e)}
+        />
+        <FieldNote k={k} note={note} />
+        <FieldError id={'e-' + k} msg={e} />
+      </div>
     </div>
   )
 }
@@ -198,32 +227,34 @@ export function SelectField({ f, k, label, required, options, className = '' }: 
           {required && ' (required)'}
         </span>
       </label>
-      <div className="sel">
-        <select
-          id={'f-' + k}
-          name={k}
-          className="ctl"
-          value={f.v[k] ?? ''}
-          onChange={f.set(k)}
-          aria-invalid={e ? true : undefined}
-          aria-describedby={e ? 'e-' + k : undefined}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <span>
-          <Icon name="chevron-right" size={16} />
-        </span>
+      <div className="fld-b">
+        <div className="sel">
+          <select
+            id={'f-' + k}
+            name={k}
+            className="ctl"
+            value={f.v[k] ?? ''}
+            onChange={f.set(k)}
+            aria-invalid={e ? true : undefined}
+            aria-describedby={e ? 'e-' + k : undefined}
+          >
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <span>
+            <Icon name="chevron-right" size={16} />
+          </span>
+        </div>
+        <FieldError id={'e-' + k} msg={e} />
       </div>
-      <FieldError id={'e-' + k} msg={e} />
     </div>
   )
 }
 
-export function TextAreaField({ f, k, label, required, help, maxLength }: FieldProps & { maxLength: number }) {
+export function TextAreaField({ f, k, label, required, help, note, maxLength }: FieldProps & { maxLength: number }) {
   const e = f.err(k)
   return (
     <div className="fld" onBlur={f.blur(k)}>
@@ -232,23 +263,26 @@ export function TextAreaField({ f, k, label, required, help, maxLength }: FieldP
           {label}
           {required && ' (required)'}
         </span>
-        {help && <span className="lbl-h">{help}</span>}
+        {help && <> <span className="lbl-h">{help}</span></>}
       </label>
-      <textarea
-        id={'f-' + k}
-        name={k}
-        className="ctl"
-        value={f.v[k] ?? ''}
-        onChange={f.set(k)}
-        maxLength={maxLength}
-        aria-required={required || undefined}
-        aria-invalid={e ? true : undefined}
-        aria-describedby={e ? 'e-' + k : undefined}
-      />
-      <FieldError id={'e-' + k} msg={e} />
-      <span className="counter tnum">
-        {(f.v[k] ?? '').length} / {maxLength}
-      </span>
+      <div className="fld-b">
+        <textarea
+          id={'f-' + k}
+          name={k}
+          className="ctl"
+          value={f.v[k] ?? ''}
+          onChange={f.set(k)}
+          maxLength={maxLength}
+          aria-required={required || undefined}
+          aria-invalid={e ? true : undefined}
+          aria-describedby={describedBy(k, note, e)}
+        />
+        <FieldNote k={k} note={note} />
+        <FieldError id={'e-' + k} msg={e} />
+        <span className="counter tnum">
+          {(f.v[k] ?? '').length} / {maxLength}
+        </span>
+      </div>
     </div>
   )
 }

@@ -1,23 +1,59 @@
-import type { CollectionConfig } from 'payload'
-import { anyone, staff } from '../access'
+import { APIError, type CollectionConfig, type Where } from 'payload'
+import { allow, allowField, canManagePlayers, canViewPlayerRecords, canViewSensitivePlayerData, idOf, nobodyField, type RoleUser } from '../access'
 import { slugField } from '../fields/slug'
+import { auditHooks, publishRule } from '../hooks/audit'
 import { revalidateCollection } from '../hooks/revalidate'
-import { POSITIONS, SQUAD_ROLES } from '../lib/constants'
+import { POSITIONS, PUBLICATION_STATUSES, SQUAD_ROLES } from '../lib/constants'
 
+const site = revalidateCollection<{ slug?: string | null }>((doc) => ['/', '/squad', `/squad/${doc.slug}`])
+const audit = auditHooks({ label: (d) => d.fullName as string, status: [publishRule('publicationStatus')] })
+
+/**
+ * Public player profiles (spec §4.2 `PublicPlayers`). Deliberately limited fields,
+ * linked to the private Player record. The public API and the squad pages see
+ * published profiles only; publishing needs an approved record.
+ */
 export const Players: CollectionConfig = {
   slug: 'players',
+  labels: { singular: 'Public profile', plural: 'Public profiles' },
   admin: {
     useAsTitle: 'fullName',
-    group: 'Club',
-    defaultColumns: ['fullName', 'shirtNumber', 'position', 'isActive', 'consentOnFile'],
+    group: 'Players and members',
+    defaultColumns: ['fullName', 'shirtNumber', 'position', 'publicationStatus', 'isActive'],
+    description: 'What the public sees on the Squad pages. Only “Published” profiles appear.',
   },
-  access: { read: anyone, create: staff, update: staff, delete: staff },
+  access: {
+    read: ({ req: { user } }) => {
+      if (canViewPlayerRecords(user as RoleUser)) return true
+      const where: Where = { publicationStatus: { equals: 'published' } }
+      return where
+    },
+    create: allow(canManagePlayers),
+    update: allow(canManagePlayers),
+    delete: allow(canManagePlayers),
+  },
   defaultSort: 'shirtNumber',
-  hooks: revalidateCollection<{ slug?: string | null }>((doc) => [
-    '/',
-    '/squad',
-    `/squad/${doc.slug}`,
-  ]),
+  hooks: {
+    beforeChange: [
+      async ({ data, originalDoc, req }) => {
+        const to = data.publicationStatus ?? originalDoc?.publicationStatus
+        const from = originalDoc?.publicationStatus
+        const recordId = idOf(data.record ?? originalDoc?.record)
+        if (to === 'published' && recordId != null) {
+          const record = await req.payload.findByID({ collection: 'registrations', id: recordId, depth: 0, overrideAccess: true, req })
+          if (record.applicationStatus !== 'approved')
+            throw new APIError('The player’s registration must be approved before the profile can be published.', 400, undefined, true)
+        }
+        if (to === 'published' && from !== 'published') {
+          data.publishedAt = new Date().toISOString()
+          data.publishedBy = req.user?.id
+        }
+        return data
+      },
+    ],
+    afterChange: [...site.afterChange, ...audit.afterChange],
+    afterDelete: [...site.afterDelete, ...audit.afterDelete],
+  },
   fields: [
     {
       type: 'row',
@@ -91,6 +127,7 @@ export const Players: CollectionConfig = {
         {
           name: 'dateOfBirth',
           type: 'date',
+          access: { read: allowField(canViewSensitivePlayerData) },
           admin: {
             date: { pickerAppearance: 'dayOnly' },
             description: 'Stored for the club. Shown only as age, and only if "Show age" is ticked.',
@@ -134,6 +171,37 @@ export const Players: CollectionConfig = {
       type: 'checkbox',
       defaultValue: false,
       admin: { position: 'sidebar', description: 'Show on the home page (4–6 players).' },
+    },
+    {
+      name: 'publicationStatus',
+      type: 'select',
+      required: true,
+      defaultValue: 'draft',
+      index: true,
+      options: PUBLICATION_STATUSES.map(({ label, value }) => ({ label, value })),
+      admin: { position: 'sidebar', description: 'Approval does not publish. Set “Published” when the public fields and photo are approved.' },
+    },
+    {
+      name: 'record',
+      label: 'Player record',
+      type: 'relationship',
+      relationTo: 'registrations',
+      index: true,
+      access: { read: allowField(canViewPlayerRecords) },
+      admin: { position: 'sidebar', description: 'The private record this profile comes from. Required before publishing new players.' },
+    },
+    {
+      name: 'publishedAt',
+      type: 'date',
+      access: { read: allowField(canViewPlayerRecords), create: nobodyField, update: nobodyField },
+      admin: { position: 'sidebar', readOnly: true },
+    },
+    {
+      name: 'publishedBy',
+      type: 'relationship',
+      relationTo: 'users',
+      access: { read: allowField(canViewPlayerRecords), create: nobodyField, update: nobodyField },
+      admin: { position: 'sidebar', readOnly: true },
     },
   ],
 }

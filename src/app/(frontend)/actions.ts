@@ -13,15 +13,21 @@ import {
   SPONSOR_INTERESTS,
   TEAMS,
 } from '@/lib/constants'
+import { committeeSubmitter } from '@/access/roles'
+import { getCurrentUser } from '@/lib/auth'
 import { getPayloadClient } from '@/lib/payload'
 import {
   FORM_FIELDS,
   HONEYPOT,
   isChecked,
   isMinor,
+  maskAadhaar,
+  maskPan,
   normalisePhone,
   PHOTO_MAX_BYTES,
   PHOTO_TYPES,
+  REGISTER_FILES,
+  UPLOAD_TOTAL_MAX_BYTES,
   validate,
   type Errors,
   type FormKind,
@@ -116,12 +122,44 @@ function readValues(kind: FormKind, formData: FormData): Values {
 
 const phoneOrRaw = (v: string) => (v ? (normalisePhone(v) ?? v) : undefined)
 
-/** Optional registration photo: images only, under the Vercel body limit. */
-function readPhoto(formData: FormData): File | null | 'invalid' {
-  const file = formData.get('photo')
-  if (!file || typeof file === 'string' || file.size === 0) return null
-  if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) return 'invalid'
-  return file
+type RegisterFile = (typeof REGISTER_FILES)[number]
+
+/**
+ * Register form images (photo, Aadhaar, PAN): images only, each under PHOTO_MAX_BYTES and
+ * together under the Vercel body limit. Problems come back as form errors.
+ */
+function readImages(formData: FormData, errors: Errors): Partial<Record<RegisterFile, File>> {
+  const files: Partial<Record<RegisterFile, File>> = {}
+  let total = 0
+  for (const k of REGISTER_FILES) {
+    const file = formData.get(k)
+    if (!file || typeof file === 'string' || file.size === 0) continue
+    if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) errors[k] = 'Use a JPG, PNG or WebP image under 1.4 MB'
+    else files[k] = file
+    total += file.size
+  }
+  if (total > UPLOAD_TOTAL_MAX_BYTES) errors.photo = 'The images are too large together. Remove the photo or use smaller images.'
+  return files
+}
+
+async function storeImage(
+  payload: Payload,
+  collection: 'registration-photos' | 'player-documents',
+  file: File,
+  data: { alt: string } | { title: string },
+): Promise<number> {
+  const doc = await payload.create({
+    collection,
+    overrideAccess: true,
+    data: data as never,
+    file: {
+      data: Buffer.from(await file.arrayBuffer()),
+      mimetype: file.type,
+      name: file.name.replace(/[^\w.-]+/g, '-').slice(-80) || 'image.jpg',
+      size: file.size,
+    },
+  })
+  return doc.id as number
 }
 
 /**
@@ -135,9 +173,16 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
   if (String(formData.get(HONEYPOT) ?? '').length > 0) return { status: 'success' }
 
   const values = readValues(kind, formData)
-  const errors = validate(kind, values)
-  const photo = kind === 'register' ? readPhoto(formData) : null
-  if (photo === 'invalid') errors.photo = 'Use a JPG, PNG or WebP image under 4 MB'
+  // Committee registrations are only for the Secretary and Joint Secretary, signed in;
+  // the Registrations collection checks this again.
+  const submitter = kind === 'register' && values.mode === 'committee' ? committeeSubmitter(await getCurrentUser()) : null
+  if (kind === 'register' && values.mode === 'committee' && !submitter)
+    return { status: 'error', message: 'Only the Secretary or Joint Secretary can register a player for the club. Sign in first, or register as the player.' }
+  const fileErrors: Errors = {}
+  const images = kind === 'register' ? readImages(formData, fileErrors) : {}
+  // Required uploads are checked by the shared rules, which see an attached file as 'file'.
+  for (const k of REGISTER_FILES) if (kind === 'register') values[k] = images[k] ? 'file' : ''
+  const errors = { ...validate(kind, values), ...fileErrors }
   if (Object.keys(errors).length > 0) return { status: 'invalid', errors }
 
   try {
@@ -198,36 +243,48 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
     } else if (kind === 'register') {
       const minor = isMinor(values.dateOfBirth)
       const committee = values.mode === 'committee'
-      let photoId: number | undefined
-      if (photo && photo !== 'invalid') {
-        const doc = await payload.create({
-          collection: 'registration-photos',
-          overrideAccess: true,
-          data: { alt: `Registration photo: ${values.fullName}` },
-          file: {
-            data: Buffer.from(await photo.arrayBuffer()),
-            mimetype: photo.type,
-            name: photo.name.replace(/[^\w.-]+/g, '-').slice(-80) || 'photo.jpg',
-            size: photo.size,
-          },
-        })
-        photoId = doc.id
-      }
+      const photoId = images.photo
+        ? await storeImage(payload, 'registration-photos', images.photo, { alt: `Registration photo: ${values.fullName}` })
+        : undefined
+      const aadhaarImageId = images.aadhaarImage
+        ? await storeImage(payload, 'player-documents', images.aadhaarImage, { title: `Aadhaar card: ${values.fullName}` })
+        : undefined
+      const panImageId = images.panImage
+        ? await storeImage(payload, 'player-documents', images.panImage, { title: `PAN card: ${values.fullName}` })
+        : undefined
+      const whatsapp = isChecked(values.whatsappSame) ? values.phone : values.whatsapp
+      // A signed-in player registering themself is linked to the record so they can follow it.
+      const me = await getCurrentUser()
       await payload.create({
         collection: 'registrations',
         overrideAccess: true,
+        user: me ?? undefined,
         data: {
-          status: 'new',
+          // Committee entries are approved on submission (see the Registrations hook).
+          applicationStatus: committee ? 'approved' : 'pending',
+          user: me && !committee ? me.id : undefined,
           mode: committee ? 'committee' : 'player',
-          registeredBy: committee
-            ? { name: values.regName, role: (values.regRole || 'other') as 'other', phone: phoneOrRaw(values.regPhone) }
-            : undefined,
+          registeredBy: submitter ?? undefined,
           fullName: values.fullName,
           dateOfBirth: new Date(values.dateOfBirth).toISOString(),
           phone: phoneOrRaw(values.phone),
-          email: values.email || undefined,
+          whatsapp: phoneOrRaw(whatsapp),
+          email: values.email.toLowerCase(),
+          bloodGroup: values.bloodGroup as 'unknown',
           address: values.address,
           photo: photoId,
+          education: {
+            schoolName: values.schoolName || undefined,
+            bachelors: { degree: (values.bachelorDegree || undefined) as 'ba' | undefined, college: values.bachelorCollege || undefined },
+            masters: { degree: (values.masterDegree || undefined) as 'ma' | undefined, college: values.masterCollege || undefined },
+            other: values.otherQualifications || undefined,
+          },
+          identity: {
+            aadhaarNumber: maskAadhaar(values.aadhaarNumber),
+            aadhaarImage: aadhaarImageId,
+            panNumber: values.panNumber ? maskPan(values.panNumber) : undefined,
+            panImage: panImageId,
+          },
           guardian: minor ? { name: values.guardianName, phone: phoneOrRaw(values.guardianPhone) } : undefined,
           team: (values.team || 'unassigned') as 'unassigned',
           foot: (values.foot || 'right') as 'right',
@@ -248,16 +305,18 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
           fingerprint,
         },
       })
-      // The email leaves out address and medical notes; staff read those in the admin.
-      await notifyClub(payload, `New player registration: ${values.fullName}`, [
+      // The email leaves out address, medical notes and ID numbers; staff read those in the admin.
+      await notifyClub(payload, `${committee ? 'Player registered by the committee' : 'New player registration'}: ${values.fullName}`, [
         ['Player', values.fullName],
         ['Date of birth', values.dateOfBirth],
         ['Under 18', minor ? 'Yes' : 'No'],
         ['Team', labelFor(TEAMS, values.team)],
         ['Position', labelFor(PREFERRED_POSITIONS, values.position)],
         ['Preferred foot', labelFor(FEET, values.foot)],
-        ['Registered by', committee ? `${values.regName} (${labelFor(COMMITTEE_ROLES, values.regRole)})` : 'The player'],
+        ['Registered by', submitter ? `${submitter.name} (${labelFor(COMMITTEE_ROLES, submitter.role)})` : 'The player'],
+        ['Status', committee ? 'Approved on submission' : 'Waiting for approval'],
         ['Photo', photoId ? 'Attached' : null],
+        ['ID documents', [aadhaarImageId && 'Aadhaar', panImageId && 'PAN'].filter(Boolean).join(' and ') || null],
       ])
     } else {
       const type = kind === 'sponsor' ? 'sponsor' : values.type || 'general'

@@ -2,7 +2,9 @@ import 'server-only'
 import { draftMode } from 'next/headers'
 import { cache } from 'react'
 import type { Payload, Where } from 'payload'
+import { livePublicAnnouncements } from '@/collections/Announcements'
 import type {
+  Announcement,
   JoinPage,
   Match,
   Media,
@@ -11,7 +13,9 @@ import type {
   Sponsor,
   Staff,
 } from '@/payload-types'
+import { roleLabel } from '@/access/roles'
 import { CLUB_NAME } from './constants'
+import { imageOf, type ImageVM } from './view'
 import { getPayloadClient } from './payload'
 
 /**
@@ -122,11 +126,14 @@ export const getLastUpdated = cache(() =>
 
 /* ---------------------------------- Players --------------------------------- */
 
+// Only published public profiles reach the site (spec §4.2, §5 step 4).
+const LIVE_PLAYER: Where = { and: [{ isActive: { equals: true } }, { publicationStatus: { equals: 'published' } }] }
+
 export const getPlayers = cache(() =>
   safely<Player[]>('players', async (p) => {
     const res = await p.find({
       collection: 'players',
-      where: { isActive: { equals: true } },
+      where: LIVE_PLAYER,
       sort: 'shirtNumber',
       limit: 200,
       depth: 1,
@@ -140,7 +147,7 @@ export const getFeaturedPlayers = cache(() =>
     const res = await p.find({
       collection: 'players',
       where: {
-        and: [{ isActive: { equals: true } }, { featured: { equals: true } }, { squadRole: { equals: 'squad' } }],
+        and: [LIVE_PLAYER, { featured: { equals: true } }, { squadRole: { equals: 'squad' } }],
       },
       sort: 'shirtNumber',
       limit: 6,
@@ -154,7 +161,7 @@ export const getPlayerBySlug = cache((slug: string) =>
   safely<Player | null>('player', async (p) => {
     const res = await p.find({
       collection: 'players',
-      where: { slug: { equals: slug } },
+      where: { and: [{ slug: { equals: slug } }, LIVE_PLAYER] },
       limit: 1,
       depth: 1,
     })
@@ -165,6 +172,43 @@ export const getPlayerBySlug = cache((slug: string) =>
 export const getStaff = cache(() =>
   safely<Staff[]>('staff', async (p) => {
     const res = await p.find({ collection: 'staff', sort: 'order', limit: 100, depth: 1 })
+    return res.docs
+  }),
+)
+
+/* ------------------------------- Appointments ------------------------------- */
+
+export type OfficialVM = { id: string; name: string; role: string; photo: ImageVM | null }
+
+/** Active committee members, conservators and mentors for the About page (public fields only). */
+export const getOfficials = cache(() =>
+  safely<OfficialVM[]>('officials', async (p) => {
+    const active: Where = { status: { equals: 'active' } }
+    const select = { name: true, photo: true } as const
+    const [committee, conservators, mentors] = await Promise.all([
+      p.find({ collection: 'committee-members', where: active, sort: 'order', limit: 10, depth: 1, select: { ...select, position: true } }),
+      p.find({ collection: 'conservators', where: active, sort: 'name', limit: 10, depth: 1, select }),
+      p.find({ collection: 'mentors', where: active, sort: 'name', limit: 10, depth: 1, select }),
+    ])
+    return [
+      ...committee.docs.map((d) => ({ id: `c${d.id}`, name: d.name, role: roleLabel(d.position), photo: imageOf(d.photo) })),
+      ...conservators.docs.map((d) => ({ id: `k${d.id}`, name: d.name, role: 'Conservator', photo: imageOf(d.photo) })),
+      ...mentors.docs.map((d) => ({ id: `m${d.id}`, name: d.name, role: 'Mentor', photo: imageOf(d.photo) })),
+    ]
+  }),
+)
+
+/* ------------------------------- Announcements ------------------------------ */
+
+export const getAnnouncements = cache((limit = 50) =>
+  safely<Announcement[]>('announcements', async (p) => {
+    const res = await p.find({
+      collection: 'announcements',
+      where: livePublicAnnouncements(),
+      sort: '-publishedAt',
+      limit,
+      depth: 1,
+    })
     return res.docs
   }),
 )
@@ -211,7 +255,7 @@ export const searchSite = cache((q: string) =>
     const [players, staff, matches] = await Promise.all([
       p.find({
         collection: 'players',
-        where: { and: [{ isActive: { equals: true } }, { fullName: { like: term } }] },
+        where: { and: [LIVE_PLAYER, { fullName: { like: term } }] },
         limit: 10,
         depth: 0,
         select: { fullName: true, slug: true, squadRole: true },
