@@ -63,7 +63,7 @@ a.chip[aria-current=true]{border:none;background:var(--color-primary);color:var(
 .dl dd{margin:0;color:var(--color-text-primary);white-space:pre-line;overflow-wrap:anywhere}
 
 .dform{display:flex;flex-direction:column;gap:16px}
-.dform-row{display:grid;gap:16px}@media(min-width:640px){.dform-row{grid-template-columns:repeat(2,minmax(0,1fr))}.dform-row.r4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.dform-row{display:grid;gap:16px}@media(min-width:640px){.dform-row{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1024px){.dform-row.r4{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .dacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .dinline{display:inline}
 

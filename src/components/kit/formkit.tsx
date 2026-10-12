@@ -137,12 +137,25 @@ function FieldError({ id, msg }: { id: string; msg?: string }) {
   )
 }
 
+const describedBy = (k: string, note?: string, e?: string) => [note && 'n-' + k, e && 'e-' + k].filter(Boolean).join(' ') || undefined
+
+function FieldNote({ k, note }: { k: string; note?: string }) {
+  return note ? (
+    <span id={'n-' + k} className="fnote">
+      {note}
+    </span>
+  ) : null
+}
+
 type FieldProps = {
   f: Form
   k: string
   label: string
   required?: boolean
+  /** Short hint on the label line, e.g. "Optional". Keep it short so the label stays on one line. */
   help?: string
+  /** Longer guidance, shown under the control. */
+  note?: string
   className?: string
 }
 
@@ -152,6 +165,7 @@ export function TextField({
   label,
   required,
   help,
+  note,
   type = 'text',
   placeholder,
   autoComplete,
@@ -194,8 +208,9 @@ export function TextField({
           maxLength={maxLength}
           aria-required={required || undefined}
           aria-invalid={e ? true : undefined}
-          aria-describedby={e ? 'e-' + k : undefined}
+          aria-describedby={describedBy(k, note, e)}
         />
+        <FieldNote k={k} note={note} />
         <FieldError id={'e-' + k} msg={e} />
       </div>
     </div>
@@ -239,7 +254,7 @@ export function SelectField({ f, k, label, required, options, className = '' }: 
   )
 }
 
-export function TextAreaField({ f, k, label, required, help, maxLength }: FieldProps & { maxLength: number }) {
+export function TextAreaField({ f, k, label, required, help, note, maxLength }: FieldProps & { maxLength: number }) {
   const e = f.err(k)
   return (
     <div className="fld" onBlur={f.blur(k)}>
@@ -260,8 +275,9 @@ export function TextAreaField({ f, k, label, required, help, maxLength }: FieldP
           maxLength={maxLength}
           aria-required={required || undefined}
           aria-invalid={e ? true : undefined}
-          aria-describedby={e ? 'e-' + k : undefined}
+          aria-describedby={describedBy(k, note, e)}
         />
+        <FieldNote k={k} note={note} />
         <FieldError id={'e-' + k} msg={e} />
         <span className="counter tnum">
           {(f.v[k] ?? '').length} / {maxLength}

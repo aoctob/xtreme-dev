@@ -70,7 +70,7 @@ export default async function AnnouncementEditor({
             <Field label="Category">
               <Select name="category" required defaultValue={a?.category ?? 'club'} options={ANNOUNCEMENT_CATEGORIES} />
             </Field>
-            <Field label="Expires (optional)" help="Hidden from the public after this time (IST).">
+            <Field label="Expires" hint="Optional" help="Hidden from the public after this time (IST).">
               <input name="expiresAt" type="datetime-local" className="ctl" defaultValue={localInput(a?.expiresAt)} />
             </Field>
           </div>

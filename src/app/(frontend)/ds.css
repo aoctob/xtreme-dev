@@ -131,6 +131,7 @@ button,input,select,textarea{font-family:inherit}
 /* Label line: the hint ("Optional", format notes) runs inline after the label text and wraps under it when long. */
 .lbl{display:block;font-family:var(--font-body);line-height:1.4}
 .lbl-t{font-size:14px;font-weight:600;color:var(--color-text-primary)}.lbl-h{font-size:13px;color:var(--color-text-secondary)}.lbl-t+.lbl-h{margin-left:4px}
+.fnote{font-size:13px;line-height:1.4;color:var(--color-text-secondary)}
 .ctl{height:48px;padding:0 16px;font-size:16px;background:var(--color-background);color:var(--color-text-primary);border:1px solid var(--color-border-strong);border-radius:var(--radius-control);width:100%}
 .ctl[aria-invalid=true]{border:2px solid var(--color-error)}
 textarea.ctl{height:auto;min-height:120px;padding:16px;resize:vertical;font-family:inherit}

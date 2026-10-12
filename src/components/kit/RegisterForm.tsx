@@ -138,14 +138,17 @@ type DropProps = {
   f: Form
   k: string
   label: string
-  help: string
+  /** Short hint on the label line, e.g. "Optional". */
+  help?: string
+  /** Longer guidance, shown inside the drop zone so the label stays on one line. */
+  note?: string
   required?: boolean
   /** Round thumbnail for a face photo, card-shaped for documents. */
   doc?: boolean
 }
 
 /** Drag-and-drop image picker. Images are shrunk in the browser before they are sent. */
-function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
+function ImageDrop({ f, k, label, help, note, required, doc }: DropProps) {
   const ref = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -185,8 +188,8 @@ function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
         <span className="lbl-t">
           {label}
           {required && ' (required)'}
-        </span>{' '}
-        <span className="lbl-h">{help}</span>
+        </span>
+        {help && <> <span className="lbl-h">{help}</span></>}
       </span>
       <div className="fld-b">
         <div
@@ -196,7 +199,7 @@ function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
           tabIndex={0}
           aria-label={p ? `${label} selected: ${p.name}. Click to replace` : `Add ${label.toLowerCase()}`}
           aria-invalid={e ? true : undefined}
-          aria-describedby={e ? 'e-' + k : undefined}
+          aria-describedby={[note && 'n-' + k, e && 'e-' + k].filter(Boolean).join(' ') || undefined}
           aria-busy={busy || undefined}
           onClick={() => ref.current?.click()}
           onKeyDown={(ev) => {
@@ -244,7 +247,9 @@ function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
               </span>
               <span className="pdrop-t">
                 <span>{busy ? 'Preparing image…' : `Drop a ${verb} or browse`}</span>
-                <span className="caption">JPG, PNG or WebP</span>
+                <span id={note ? 'n-' + k : undefined} className="caption">
+                  {note && note + ' '}JPG, PNG or WebP
+                </span>
               </span>
             </>
           )}
@@ -488,8 +493,11 @@ export function RegisterForm({
                 {isChecked(f.v.whatsappSame) ? (
                   <div className="fld">
                     <span className="lbl">
-                      <span className="lbl-t">WhatsApp number</span> <span className="lbl-h">Same as the calling number</span>
+                      <span className="lbl-t">WhatsApp number</span>
                     </span>
+                    <div className="fld-b">
+                      <span className="fnote">Same as the calling number.</span>
+                    </div>
                   </div>
                 ) : (
                   <TextField
@@ -524,7 +532,8 @@ export function RegisterForm({
                 f={f}
                 k="photo"
                 label="Player photo"
-                help="Optional. Head and shoulders, plain background. Used on the squad page only if the player agrees."
+                help="Optional"
+                note="Head and shoulders, plain background. Used on the squad page only if the player agrees."
               />
             </Part>
 
@@ -562,7 +571,8 @@ export function RegisterForm({
                   f={f}
                   k="shirtNumber"
                   label="Shirt number"
-                  help="Optional. Not guaranteed."
+                  help="Optional"
+                  note="Not guaranteed."
                   inputMode="numeric"
                   maxLength={2}
                   transform={(v) => v.replace(/\D/g, '').slice(0, 2)}
@@ -593,7 +603,7 @@ export function RegisterForm({
                   k="panNumber"
                   label="PAN"
                   required={!minor}
-                  help={minor ? 'Optional for under-18s' : '10 characters, like ABCPE1234F'}
+                  help={minor ? 'Optional for under-18s' : '10 characters'}
                   placeholder="ABCPE1234F"
                   autoComplete="off"
                   maxLength={10}
@@ -601,12 +611,13 @@ export function RegisterForm({
                 />
               </div>
               <div className="frow">
-                <ImageDrop f={f} k="aadhaarImage" label="Aadhaar card image" help="Front side, all four corners visible." required doc />
+                <ImageDrop f={f} k="aadhaarImage" label="Aadhaar card image" note="Front side, all four corners visible." required doc />
                 <ImageDrop
                   f={f}
                   k="panImage"
                   label="PAN card image"
-                  help={minor ? 'Optional for under-18s.' : 'Front side, all four corners visible.'}
+                  help={minor ? 'Optional for under-18s' : undefined}
+                  note="Front side, all four corners visible."
                   required={!minor}
                   doc
                 />
@@ -627,7 +638,8 @@ export function RegisterForm({
                 f={f}
                 k="otherQualifications"
                 label="Other qualifications"
-                help="Optional. Diplomas, certificates, coaching or refereeing licences."
+                help="Optional"
+                note="Diplomas, certificates, coaching or refereeing licences."
                 maxLength={LIMITS.otherQualifications}
               />
             </Part>
@@ -638,7 +650,14 @@ export function RegisterForm({
                 <TextField f={f} k="emergencyRelationship" label="Relationship" required placeholder="e.g. Mother" />
               </div>
               <TextField f={f} k="emergencyPhone" label="Emergency contact phone" type="tel" required inputMode="tel" maxLength={16} transform={maskPhone} />
-              <TextAreaField f={f} k="medical" label="Medical conditions, allergies or injuries" help="Optional" maxLength={LIMITS.medical} />
+              <TextAreaField
+                f={f}
+                k="medical"
+                label="Medical conditions"
+                help="Optional"
+                note="Include any allergies or injuries."
+                maxLength={LIMITS.medical}
+              />
             </Part>
 
             <Honeypot />
