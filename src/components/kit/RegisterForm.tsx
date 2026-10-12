@@ -181,84 +181,88 @@ function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
   const verb = doc ? 'image' : 'photo'
   return (
     <div className="fld">
-      <span className="lbl-t">
-        {label}
-        {required && ' (required)'}
+      <span className="lbl">
+        <span className="lbl-t">
+          {label}
+          {required && ' (required)'}
+        </span>{' '}
+        <span className="lbl-h">{help}</span>
       </span>
-      <span className="lbl-h">{help}</span>
-      <div
-        id={'f-' + k}
-        className={'pdrop' + (over ? ' over' : '') + (p ? ' has' : '') + (e ? ' bad' : '')}
-        role="button"
-        tabIndex={0}
-        aria-label={p ? `${label} selected: ${p.name}. Click to replace` : `Add ${label.toLowerCase()}`}
-        aria-invalid={e ? true : undefined}
-        aria-describedby={e ? 'e-' + k : undefined}
-        aria-busy={busy || undefined}
-        onClick={() => ref.current?.click()}
-        onKeyDown={(ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
+      <div className="fld-b">
+        <div
+          id={'f-' + k}
+          className={'pdrop' + (over ? ' over' : '') + (p ? ' has' : '') + (e ? ' bad' : '')}
+          role="button"
+          tabIndex={0}
+          aria-label={p ? `${label} selected: ${p.name}. Click to replace` : `Add ${label.toLowerCase()}`}
+          aria-invalid={e ? true : undefined}
+          aria-describedby={e ? 'e-' + k : undefined}
+          aria-busy={busy || undefined}
+          onClick={() => ref.current?.click()}
+          onKeyDown={(ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+              ev.preventDefault()
+              ref.current?.click()
+            }
+          }}
+          onDragOver={(ev) => {
             ev.preventDefault()
-            ref.current?.click()
-          }
-        }}
-        onDragOver={(ev) => {
-          ev.preventDefault()
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(ev) => {
-          ev.preventDefault()
-          setOver(false)
-          void take(ev.dataTransfer.files[0])
-        }}
-      >
-        {p && preview ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="" className={'pdrop-img' + (doc ? ' doc' : '')} />
-            <span className="pdrop-t">
-              <span>{p.name}</span>
-              <span className="caption">Click to replace</span>
-            </span>
-            <button
-              type="button"
-              className="fb-x"
-              aria-label={`Remove ${label.toLowerCase()}`}
-              onClick={(ev) => {
-                ev.stopPropagation()
-                f.setFile(k, null)
-                if (ref.current) ref.current.value = ''
-              }}
-            >
-              <Icon name="x" size={18} />
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="pdrop-ic">
-              <Icon name={busy ? 'loader-2' : 'upload'} size={24} color="var(--color-primary-ink)" />
-            </span>
-            <span className="pdrop-t">
-              <span>{busy ? 'Preparing image…' : `Drop a ${verb} or browse`}</span>
-              <span className="caption">JPG, PNG or WebP</span>
-            </span>
-          </>
+            setOver(true)
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(ev) => {
+            ev.preventDefault()
+            setOver(false)
+            void take(ev.dataTransfer.files[0])
+          }}
+        >
+          {p && preview ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview} alt="" className={'pdrop-img' + (doc ? ' doc' : '')} />
+              <span className="pdrop-t">
+                <span>{p.name}</span>
+                <span className="caption">Click to replace</span>
+              </span>
+              <button
+                type="button"
+                className="fb-x"
+                aria-label={`Remove ${label.toLowerCase()}`}
+                onClick={(ev) => {
+                  ev.stopPropagation()
+                  f.setFile(k, null)
+                  if (ref.current) ref.current.value = ''
+                }}
+              >
+                <Icon name="x" size={18} />
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="pdrop-ic">
+                <Icon name={busy ? 'loader-2' : 'upload'} size={24} color="var(--color-primary-ink)" />
+              </span>
+              <span className="pdrop-t">
+                <span>{busy ? 'Preparing image…' : `Drop a ${verb} or browse`}</span>
+                <span className="caption">JPG, PNG or WebP</span>
+              </span>
+            </>
+          )}
+          <input
+            ref={ref}
+            type="file"
+            accept={PHOTO_TYPES.join(',')}
+            hidden
+            onChange={(ev) => void take(ev.target.files?.[0])}
+          />
+        </div>
+        {e && (
+          <span id={'e-' + k} className="ferr">
+            <Icon name="alert-circle" size={16} />
+            {e}
+          </span>
         )}
-        <input
-          ref={ref}
-          type="file"
-          accept={PHOTO_TYPES.join(',')}
-          hidden
-          onChange={(ev) => void take(ev.target.files?.[0])}
-        />
       </div>
-      {e && (
-        <span id={'e-' + k} className="ferr">
-          <Icon name="alert-circle" size={16} />
-          {e}
-        </span>
-      )}
     </div>
   )
 }
@@ -483,8 +487,9 @@ export function RegisterForm({
                 />
                 {isChecked(f.v.whatsappSame) ? (
                   <div className="fld">
-                    <span className="lbl-t">WhatsApp number</span>
-                    <span className="lbl-h">Same as the calling number</span>
+                    <span className="lbl">
+                      <span className="lbl-t">WhatsApp number</span> <span className="lbl-h">Same as the calling number</span>
+                    </span>
                   </div>
                 ) : (
                   <TextField

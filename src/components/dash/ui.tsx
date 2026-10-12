@@ -149,10 +149,12 @@ export function Empty({ children }: { children: ReactNode }) {
 
 export function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
   return (
-    <label className="lbl">
-      <span className="lbl-t">{label}</span>
-      {help && <span className="lbl-h">{help}</span>}
-      {children}
+    <label className="fld">
+      <span className="lbl">
+        <span className="lbl-t">{label}</span>
+        {help && <> <span className="lbl-h">{help}</span></>}
+      </span>
+      <span className="fld-b">{children}</span>
     </label>
   )
 }

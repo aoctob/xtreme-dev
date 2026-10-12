@@ -177,25 +177,27 @@ export function TextField({
           {label}
           {required && ' (required)'}
         </span>
-        {help && <span className="lbl-h">{help}</span>}
+        {help && <> <span className="lbl-h">{help}</span></>}
       </label>
-      <input
-        id={'f-' + k}
-        name={k}
-        className="ctl"
-        type={type}
-        value={f.v[k] ?? ''}
-        onChange={(ev) => f.setValue(k, transform ? transform(ev.target.value) : ev.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        inputMode={inputMode}
-        max={max}
-        maxLength={maxLength}
-        aria-required={required || undefined}
-        aria-invalid={e ? true : undefined}
-        aria-describedby={e ? 'e-' + k : undefined}
-      />
-      <FieldError id={'e-' + k} msg={e} />
+      <div className="fld-b">
+        <input
+          id={'f-' + k}
+          name={k}
+          className="ctl"
+          type={type}
+          value={f.v[k] ?? ''}
+          onChange={(ev) => f.setValue(k, transform ? transform(ev.target.value) : ev.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          max={max}
+          maxLength={maxLength}
+          aria-required={required || undefined}
+          aria-invalid={e ? true : undefined}
+          aria-describedby={e ? 'e-' + k : undefined}
+        />
+        <FieldError id={'e-' + k} msg={e} />
+      </div>
     </div>
   )
 }
@@ -210,27 +212,29 @@ export function SelectField({ f, k, label, required, options, className = '' }: 
           {required && ' (required)'}
         </span>
       </label>
-      <div className="sel">
-        <select
-          id={'f-' + k}
-          name={k}
-          className="ctl"
-          value={f.v[k] ?? ''}
-          onChange={f.set(k)}
-          aria-invalid={e ? true : undefined}
-          aria-describedby={e ? 'e-' + k : undefined}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <span>
-          <Icon name="chevron-right" size={16} />
-        </span>
+      <div className="fld-b">
+        <div className="sel">
+          <select
+            id={'f-' + k}
+            name={k}
+            className="ctl"
+            value={f.v[k] ?? ''}
+            onChange={f.set(k)}
+            aria-invalid={e ? true : undefined}
+            aria-describedby={e ? 'e-' + k : undefined}
+          >
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <span>
+            <Icon name="chevron-right" size={16} />
+          </span>
+        </div>
+        <FieldError id={'e-' + k} msg={e} />
       </div>
-      <FieldError id={'e-' + k} msg={e} />
     </div>
   )
 }
@@ -244,23 +248,25 @@ export function TextAreaField({ f, k, label, required, help, maxLength }: FieldP
           {label}
           {required && ' (required)'}
         </span>
-        {help && <span className="lbl-h">{help}</span>}
+        {help && <> <span className="lbl-h">{help}</span></>}
       </label>
-      <textarea
-        id={'f-' + k}
-        name={k}
-        className="ctl"
-        value={f.v[k] ?? ''}
-        onChange={f.set(k)}
-        maxLength={maxLength}
-        aria-required={required || undefined}
-        aria-invalid={e ? true : undefined}
-        aria-describedby={e ? 'e-' + k : undefined}
-      />
-      <FieldError id={'e-' + k} msg={e} />
-      <span className="counter tnum">
-        {(f.v[k] ?? '').length} / {maxLength}
-      </span>
+      <div className="fld-b">
+        <textarea
+          id={'f-' + k}
+          name={k}
+          className="ctl"
+          value={f.v[k] ?? ''}
+          onChange={f.set(k)}
+          maxLength={maxLength}
+          aria-required={required || undefined}
+          aria-invalid={e ? true : undefined}
+          aria-describedby={e ? 'e-' + k : undefined}
+        />
+        <FieldError id={'e-' + k} msg={e} />
+        <span className="counter tnum">
+          {(f.v[k] ?? '').length} / {maxLength}
+        </span>
+      </div>
     </div>
   )
 }
