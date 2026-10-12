@@ -145,16 +145,16 @@ export function JoinForm({ trialDates, contact, responseTime, instagram }: Share
               </div>
             </div>
           </div>
-          <TextField f={f} k="email" label="Email" type="email" help="Optional" autoComplete="email" inputMode="email" />
+          <TextField f={f} k="email" label="Email" type="email" autoComplete="email" inputMode="email" />
           <div className="frow">
             <SelectField f={f} k="preferredPosition" label="Preferred position" options={opts(PREFERRED_POSITIONS)} />
             <SelectField f={f} k="experienceLevel" label="Experience level" options={opts(EXPERIENCE_LEVELS)} />
           </div>
           <div className="frow">
-            <TextField f={f} k="previousClub" label="Previous club" help="Optional" maxLength={LIMITS.short} />
+            <TextField f={f} k="previousClub" label="Previous club" maxLength={LIMITS.short} />
             <SelectField f={f} k="preferredTrialDate" label="Preferred trial date" options={trials} />
           </div>
-          <TextAreaField f={f} k="message" label="Message" help="Optional" maxLength={LIMITS.joinMessage} />
+          <TextAreaField f={f} k="message" label="Message" maxLength={LIMITS.joinMessage} />
           <Honeypot />
           <Consent f={f} k="consent" label={privacy} />
           <SubmitBtn f={f}>Submit application</SubmitBtn>
@@ -232,10 +232,10 @@ export function SponsorForm({ contact, responseTime }: Omit<Shared, 'instagram'>
           </div>
           <div className="frow">
             <TextField f={f} k="phone" label="Phone" type="tel" required autoComplete="tel" inputMode="tel" />
-            <TextField f={f} k="email" label="Email" type="email" help="Optional" autoComplete="email" inputMode="email" />
+            <TextField f={f} k="email" label="Email" type="email" autoComplete="email" inputMode="email" />
           </div>
           <SelectField f={f} k="interest" label="Interest" options={opts(SPONSOR_INTERESTS)} />
-          <TextAreaField f={f} k="message" label="Message" help="Optional" maxLength={LIMITS.sponsorMessage} />
+          <TextAreaField f={f} k="message" label="Message" maxLength={LIMITS.sponsorMessage} />
           <Honeypot />
           <Consent f={f} k="consent" label={privacy} />
           <SubmitBtn f={f}>Send enquiry</SubmitBtn>

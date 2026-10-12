@@ -147,7 +147,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <div className="dempty">{children}</div>
 }
 
-/** `hint` sits on the label line and must stay short ("Optional"); `help` is longer guidance shown under the control. */
+/** `hint` sits on the label line and must stay short; `help` is longer guidance shown under the control. */
 export function Field({ label, hint, help, children }: { label: string; hint?: string; help?: string; children: ReactNode }) {
   return (
     <label className="fld">

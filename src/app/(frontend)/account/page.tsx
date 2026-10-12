@@ -139,14 +139,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                           <textarea name="playerResponse" className="ctl" required maxLength={2000} />
                         </Field>
                         <div className="dform-row">
-                          <Field label="Updated phone" hint="Optional">
+                          <Field label="Updated phone">
                             <input name="phone" className="ctl" inputMode="tel" autoComplete="tel" />
                           </Field>
-                          <Field label="Updated email" hint="Optional">
+                          <Field label="Updated email">
                             <input name="email" type="email" className="ctl" autoComplete="email" />
                           </Field>
                         </div>
-                        <Field label="Updated home address" hint="Optional">
+                        <Field label="Updated home address">
                           <textarea name="address" className="ctl" maxLength={300} style={{ minHeight: 80 }} />
                         </Field>
                         <Submit icon="arrow-right">Send to the club</Submit>

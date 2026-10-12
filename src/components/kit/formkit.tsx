@@ -152,7 +152,7 @@ type FieldProps = {
   k: string
   label: string
   required?: boolean
-  /** Short hint on the label line, e.g. "Optional". Keep it short so the label stays on one line. */
+  /** Short hint on the label line, e.g. "10 characters". Keep it short so the label stays on one line. */
   help?: string
   /** Longer guidance, shown under the control. */
   note?: string

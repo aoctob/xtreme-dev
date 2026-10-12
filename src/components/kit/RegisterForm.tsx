@@ -138,7 +138,7 @@ type DropProps = {
   f: Form
   k: string
   label: string
-  /** Short hint on the label line, e.g. "Optional". */
+  /** Short hint on the label line, e.g. "10 characters". */
   help?: string
   /** Longer guidance, shown inside the drop zone so the label stays on one line. */
   note?: string
@@ -358,7 +358,7 @@ export function RegisterForm({
               ['phone', 'An emergency contact'],
               ['shield', 'Guardian details, if under 18'],
               ['file-text', 'Aadhaar card, and PAN card if 18 or over'],
-              ['image', 'A photo (optional)'],
+              ['image', 'A photo'],
             ] as const
           ).map(([ic, t], i) => (
             <Reveal i={i + 1} key={t} className="fact">
@@ -483,7 +483,6 @@ export function RegisterForm({
                   label="Calling number"
                   type="tel"
                   required={!minor && !cm}
-                  help={minor || cm ? 'Optional' : undefined}
                   placeholder="98765 43210"
                   autoComplete={cm ? 'off' : 'tel'}
                   inputMode="tel"
@@ -506,7 +505,6 @@ export function RegisterForm({
                     label="WhatsApp number"
                     type="tel"
                     required={!minor && !cm}
-                    help={minor || cm ? 'Optional' : undefined}
                     placeholder="98765 43210"
                     autoComplete="off"
                     inputMode="tel"
@@ -532,7 +530,6 @@ export function RegisterForm({
                 f={f}
                 k="photo"
                 label="Player photo"
-                help="Optional"
                 note="Head and shoulders, plain background. Used on the squad page only if the player agrees."
               />
             </Part>
@@ -571,13 +568,12 @@ export function RegisterForm({
                   f={f}
                   k="shirtNumber"
                   label="Shirt number"
-                  help="Optional"
                   note="Not guaranteed."
                   inputMode="numeric"
                   maxLength={2}
                   transform={(v) => v.replace(/\D/g, '').slice(0, 2)}
                 />
-                <TextField f={f} k="previousClub" label="Previous club" help="Optional" maxLength={LIMITS.short} />
+                <TextField f={f} k="previousClub" label="Previous club" maxLength={LIMITS.short} />
               </div>
             </Part>
 
@@ -603,7 +599,7 @@ export function RegisterForm({
                   k="panNumber"
                   label="PAN"
                   required={!minor}
-                  help={minor ? 'Optional for under-18s' : '10 characters'}
+                  help="10 characters"
                   placeholder="ABCPE1234F"
                   autoComplete="off"
                   maxLength={10}
@@ -616,7 +612,6 @@ export function RegisterForm({
                   f={f}
                   k="panImage"
                   label="PAN card image"
-                  help={minor ? 'Optional for under-18s' : undefined}
                   note="Front side, all four corners visible."
                   required={!minor}
                   doc
@@ -624,21 +619,20 @@ export function RegisterForm({
               </div>
             </Part>
 
-            <Part n={++n} title="Education" desc="All optional.">
-              <TextField f={f} k="schoolName" label="School name" help="Optional" maxLength={LIMITS.school} />
+            <Part n={++n} title="Education">
+              <TextField f={f} k="schoolName" label="School name" maxLength={LIMITS.school} />
               <div className="frow">
                 <SelectField f={f} k="bachelorDegree" label="Bachelor’s degree" options={BACHELOR_OPTS} />
-                <TextField f={f} k="bachelorCollege" label="College name" help="Optional" maxLength={LIMITS.school} />
+                <TextField f={f} k="bachelorCollege" label="College name" maxLength={LIMITS.school} />
               </div>
               <div className="frow">
                 <SelectField f={f} k="masterDegree" label="Master’s degree" options={MASTER_OPTS} />
-                <TextField f={f} k="masterCollege" label="College name" help="Optional" maxLength={LIMITS.school} />
+                <TextField f={f} k="masterCollege" label="College name" maxLength={LIMITS.school} />
               </div>
               <TextAreaField
                 f={f}
                 k="otherQualifications"
                 label="Other qualifications"
-                help="Optional"
                 note="Diplomas, certificates, coaching or refereeing licences."
                 maxLength={LIMITS.otherQualifications}
               />
@@ -654,7 +648,6 @@ export function RegisterForm({
                 f={f}
                 k="medical"
                 label="Medical conditions"
-                help="Optional"
                 note="Include any allergies or injuries."
                 maxLength={LIMITS.medical}
               />

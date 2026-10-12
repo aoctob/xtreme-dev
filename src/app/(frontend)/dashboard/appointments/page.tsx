@@ -17,7 +17,7 @@ function EndForm({ collection, a }: { collection: Slug; a: Appt }) {
       <form action={endAppointment} className="dform" style={{ marginTop: 8, minWidth: 240 }}>
         <input type="hidden" name="collection" value={collection} />
         <input type="hidden" name="id" value={a.id} />
-        <textarea name="reason" className="ctl" placeholder="Handover note (optional)" aria-label="Handover note" maxLength={500} />
+        <textarea name="reason" className="ctl" placeholder="Handover note" aria-label="Handover note" maxLength={500} />
         <Submit variant="secondary" confirm={`End the appointment of ${a.name}? Their permissions are removed immediately.`}>
           End appointment
         </Submit>
