@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import {
   canManageAnnouncements,
-  canUseAdmin,
   canViewAudit,
   canViewFinance,
   canViewMembers,
   canViewPlayerRecords,
+  showAdminPanelLink,
 } from '@/access/roles'
 import { DashNav, type NavItem } from '@/components/dash/client'
 import { DashHeader } from '@/components/dash/ui'
@@ -32,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     ...(canViewFinance(user) ? [{ href: '/dashboard/finance', label: 'Finance', icon: 'wallet' } as NavItem] : []),
     ...(canViewAudit(user) ? [{ href: '/dashboard/audit', label: 'Audit log', icon: 'history' } as NavItem] : []),
     'sep',
-    ...(canUseAdmin(user) ? [{ href: '/admin', label: 'Admin panel', icon: 'arrow-up-right', external: true } as NavItem] : []),
+    ...(showAdminPanelLink(user) ? [{ href: '/admin', label: 'Admin panel', icon: 'arrow-up-right', external: true } as NavItem] : []),
     { href: '/account', label: 'My account', icon: 'user' },
   ]
   return (

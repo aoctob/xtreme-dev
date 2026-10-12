@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { canUseAdmin, canUseDashboard, canViewPlayerRecords } from '@/access/roles'
+import { canUseDashboard, canViewPlayerRecords, showAdminPanelLink } from '@/access/roles'
 import { Submit } from '@/components/dash/client'
 import { DashHeader, Empty, Field, fmtDate, Flash, SectionTitle, Tag } from '@/components/dash/ui'
 import { Icon } from '@/components/kit/Icon'
@@ -64,14 +64,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         )}
         <Flash params={params} />
 
-        {(canUseDashboard(me) || canUseAdmin(me)) && (
+        {(canUseDashboard(me) || showAdminPanelLink(me)) && (
           <section className="dacts">
             {canUseDashboard(me) && (
               <Link href="/dashboard" className="btn btn-primary">
                 <Icon name="layout-dashboard" size={16} /> Committee dashboard
               </Link>
             )}
-            {canUseAdmin(me) && (
+            {showAdminPanelLink(me) && (
               <a href="/admin" className="btn btn-secondary">
                 Admin panel
               </a>

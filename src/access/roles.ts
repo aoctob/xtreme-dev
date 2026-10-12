@@ -133,6 +133,13 @@ export const canUseDashboard = any('super-admin', ...COMMITTEE, 'conservator', '
 /** Payload admin at /admin. Players and Members use /account instead. */
 export const canUseAdmin = any('super-admin', ...COMMITTEE, 'conservator', 'mentor', 'editor')
 
+/**
+ * Whether to show the general "Admin panel" entry point (dashboard sidebar, /account).
+ * Committee roles get to /admin only through task-specific links on dashboard pages;
+ * Content editors have no dashboard, so /account stays their way in.
+ */
+export const showAdminPanelLink = (user: RoleUser) => isSuperAdmin(user) || (canUseAdmin(user) && !canUseDashboard(user))
+
 /** Normalise a relationship value (id or populated doc) to its id. */
 export const idOf = (v: unknown): number | string | null => {
   if (v == null) return null
