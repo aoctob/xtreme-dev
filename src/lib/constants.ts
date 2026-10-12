@@ -102,8 +102,11 @@ export const REGISTRATION_MODES = [
   { label: 'Committee member', value: 'committee' },
 ] as const
 
+/** Who submitted a committee registration. The last four only appear on older records. */
 export const COMMITTEE_ROLES = [
   { label: 'Secretary', value: 'secretary' },
+  { label: 'Joint Secretary', value: 'joint-secretary' },
+  { label: 'Super Admin', value: 'super-admin' },
   { label: 'Coach', value: 'coach' },
   { label: 'Team manager', value: 'team-manager' },
   { label: 'Treasurer', value: 'treasurer' },

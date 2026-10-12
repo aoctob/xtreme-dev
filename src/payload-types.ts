@@ -411,7 +411,7 @@ export interface Registration {
   mode: 'player' | 'committee';
   registeredBy?: {
     name?: string | null;
-    role?: ('secretary' | 'coach' | 'team-manager' | 'treasurer' | 'other') | null;
+    role?: ('secretary' | 'joint-secretary' | 'super-admin' | 'coach' | 'team-manager' | 'treasurer' | 'other') | null;
     phone?: string | null;
   };
   fullName: string;

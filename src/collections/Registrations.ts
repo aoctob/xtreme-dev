@@ -5,9 +5,11 @@ import {
   allowField,
   allowOrOwn,
   canManagePlayers,
+  canRegisterAsCommittee,
   canViewPlayerRecords,
   canViewSensitivePlayerData,
   checkOrOwner,
+  committeeSubmitter,
   isSuperAdmin,
   nobody,
   nobodyField,
@@ -92,7 +94,8 @@ const audit = auditHooks({
 
 /**
  * Private player records (spec §4.1 `Players`, §5). Created by the public Register form
- * as `pending`, reviewed and approved by the Secretary or Joint Secretary. Approval never
+ * as `pending`, reviewed and approved by the Secretary or Joint Secretary; their own
+ * committee registrations are approved on submission. Approval never
  * publishes anything: the public squad page reads only published Public profiles.
  */
 export const Registrations: CollectionConfig = {
@@ -137,6 +140,15 @@ export const Registrations: CollectionConfig = {
           if (actor?.id) data.submittedBy = actor.id
           // Applicants never choose their own status (spec §5 step 1).
           if (!canManagePlayers(actor)) data.applicationStatus = 'pending'
+          // Only the Secretary or Joint Secretary (or Super Admin) registers on the club's behalf.
+          // The submitter comes from their account, and the record goes straight in as approved.
+          if (data.mode === 'committee') {
+            const submitter = committeeSubmitter(req.user as Parameters<typeof committeeSubmitter>[0])
+            if (!canRegisterAsCommittee(actor) || !submitter)
+              throw new APIError('Only the Secretary or Joint Secretary can register a player for the club.', 403, undefined, true)
+            data.registeredBy = { ...data.registeredBy, name: submitter.name, role: submitter.role }
+            if (!data.applicationStatus || data.applicationStatus === 'pending') data.applicationStatus = 'approved'
+          }
         }
         const from = operation === 'create' ? 'pending' : originalDoc?.applicationStatus
         const to = data.applicationStatus ?? from

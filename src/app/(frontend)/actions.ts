@@ -13,6 +13,7 @@ import {
   SPONSOR_INTERESTS,
   TEAMS,
 } from '@/lib/constants'
+import { committeeSubmitter } from '@/access/roles'
 import { getCurrentUser } from '@/lib/auth'
 import { getPayloadClient } from '@/lib/payload'
 import {
@@ -172,6 +173,11 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
   if (String(formData.get(HONEYPOT) ?? '').length > 0) return { status: 'success' }
 
   const values = readValues(kind, formData)
+  // Committee registrations are only for the Secretary and Joint Secretary, signed in;
+  // the Registrations collection checks this again.
+  const submitter = kind === 'register' && values.mode === 'committee' ? committeeSubmitter(await getCurrentUser()) : null
+  if (kind === 'register' && values.mode === 'committee' && !submitter)
+    return { status: 'error', message: 'Only the Secretary or Joint Secretary can register a player for the club. Sign in first, or register as the player.' }
   const fileErrors: Errors = {}
   const images = kind === 'register' ? readImages(formData, fileErrors) : {}
   // Required uploads are checked by the shared rules, which see an attached file as 'file'.
@@ -254,12 +260,11 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
         overrideAccess: true,
         user: me ?? undefined,
         data: {
-          applicationStatus: 'pending',
+          // Committee entries are approved on submission (see the Registrations hook).
+          applicationStatus: committee ? 'approved' : 'pending',
           user: me && !committee ? me.id : undefined,
           mode: committee ? 'committee' : 'player',
-          registeredBy: committee
-            ? { name: values.regName, role: (values.regRole || 'other') as 'other', phone: phoneOrRaw(values.regPhone) }
-            : undefined,
+          registeredBy: submitter ?? undefined,
           fullName: values.fullName,
           dateOfBirth: new Date(values.dateOfBirth).toISOString(),
           phone: phoneOrRaw(values.phone),
@@ -301,14 +306,15 @@ export async function submitForm(kind: FormKind, formData: FormData): Promise<Fo
         },
       })
       // The email leaves out address, medical notes and ID numbers; staff read those in the admin.
-      await notifyClub(payload, `New player registration: ${values.fullName}`, [
+      await notifyClub(payload, `${committee ? 'Player registered by the committee' : 'New player registration'}: ${values.fullName}`, [
         ['Player', values.fullName],
         ['Date of birth', values.dateOfBirth],
         ['Under 18', minor ? 'Yes' : 'No'],
         ['Team', labelFor(TEAMS, values.team)],
         ['Position', labelFor(PREFERRED_POSITIONS, values.position)],
         ['Preferred foot', labelFor(FEET, values.foot)],
-        ['Registered by', committee ? `${values.regName} (${labelFor(COMMITTEE_ROLES, values.regRole)})` : 'The player'],
+        ['Registered by', submitter ? `${submitter.name} (${labelFor(COMMITTEE_ROLES, submitter.role)})` : 'The player'],
+        ['Status', committee ? 'Approved on submission' : 'Waiting for approval'],
         ['Photo', photoId ? 'Attached' : null],
         ['ID documents', [aadhaarImageId && 'Aadhaar', panImageId && 'PAN'].filter(Boolean).join(' and ') || null],
       ])

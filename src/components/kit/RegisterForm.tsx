@@ -44,9 +44,6 @@ import { Reveal } from './motion'
 import { Button } from './ui'
 
 const LABELS: Record<string, string> = {
-  regName: 'Your name',
-  regRole: 'Your role',
-  regPhone: 'Your phone',
   fullName: 'Player full name',
   dateOfBirth: 'Date of birth',
   phone: 'Calling number',
@@ -119,7 +116,6 @@ const BLANK = {
   confirm: '',
   consent: '',
 }
-const INITIAL = { mode: 'player', regName: '', regRole: 'secretary', regPhone: '', ...BLANK }
 
 function Part({ n, title, desc, children }: { n: number; title: string; desc?: string; children: React.ReactNode }) {
   return (
@@ -267,22 +263,35 @@ function ImageDrop({ f, k, label, help, required, doc }: DropProps) {
   )
 }
 
-/** Season registration, for the player or a committee member (kit-register.jsx). */
-export function RegisterForm({ contact, responseTime, instagram }: { contact: string; responseTime: string; instagram: string | null }) {
+/**
+ * Season registration (kit-register.jsx). Who is registering follows the signed-in account:
+ * the Secretary or Joint Secretary (`submitter`) registers for the club, everyone else as the player.
+ */
+export function RegisterForm({
+  contact,
+  responseTime,
+  instagram,
+  submitter,
+}: {
+  contact: string
+  responseTime: string
+  instagram: string | null
+  submitter: { name: string; role: string } | null
+}) {
   const [count, setCount] = useState(0)
   const f = useForm({
     kind: 'register',
-    initial: INITIAL,
+    initial: { mode: submitter ? 'committee' : 'player', ...BLANK },
     labels: LABELS,
     startEvent: 'register_form_start',
     successEvent: 'register_submit_success',
     errorEvent: 'register_submit_error',
   })
-  const cm = f.v.mode === 'committee'
+  const cm = !!submitter
+  const asWho = submitter ? `${submitter.name} (${labelFor(COMMITTEE_ROLES, submitter.role)})` : ''
   const age = ageOf(f.v.dateOfBirth)
   const minor = isMinor(f.v.dateOfBirth)
   const req = [
-    ...(cm ? ['regName', 'regPhone'] : []),
     'fullName',
     'dateOfBirth',
     ...(!minor && !cm ? ['phone', ...(isChecked(f.v.whatsappSame) ? [] : ['whatsapp'])] : []),
@@ -301,7 +310,7 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
   ]
   const first = f.v.fullName.trim().split(' ')[0]
   const again = () => {
-    f.reset({ mode: f.v.mode, regName: f.v.regName, regRole: f.v.regRole, regPhone: f.v.regPhone })
+    f.reset({ mode: f.v.mode })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   useEffect(() => {
@@ -317,20 +326,16 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
         <Reveal className="facts-card">
           <div>
             <div className="eyebrow">Who is registering?</div>
-            <div className="seg" role="radiogroup" aria-label="Who is registering">
-              <button type="button" role="radio" aria-label="I’m the player" aria-checked={!cm} className={!cm ? 'on' : ''} onClick={() => f.setValue('mode', 'player')}>
-                <Icon name="user" size={18} />
-                <span>I’m the player</span>
-              </button>
-              <button type="button" role="radio" aria-label="Committee member" aria-checked={cm} className={cm ? 'on' : ''} onClick={() => f.setValue('mode', 'committee')}>
-                <Icon name="clipboard-list" size={18} />
-                <span>Committee</span>
-              </button>
-              <span className="seg-bar" style={{ transform: `translateX(${cm ? 100 : 0}%)` }} aria-hidden="true" />
+            <div className="seg one">
+              <span className="seg-bar" aria-hidden="true" />
+              <span className="seg-item">
+                <Icon name={cm ? 'clipboard-list' : 'user'} size={18} />
+                <span>{cm ? 'Committee' : 'Player'}</span>
+              </span>
             </div>
             <p className="caption" style={{ margin: '12px 0 0' }}>
               {cm
-                ? 'Registering on behalf of a player. You can add several players one after another.'
+                ? `Signed in as ${asWho}. Players you register are approved straight away, and you can add several one after another.`
                 : 'Under 18? A parent or guardian completes part of the form with you.'}
             </p>
           </div>
@@ -369,9 +374,9 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
             steps={
               cm
                 ? [
-                    'The club secretary checks the details.',
+                    'The registration is approved and the player has a Player ID.',
                     'The player is added to the ' + (f.v.team === 'unassigned' ? 'squad list' : team.toLowerCase()) + '.',
-                    (minor ? 'The guardian' : 'The player') + ' gets a confirmation message.',
+                    'Prepare their public squad profile from the dashboard when you are ready.',
                   ]
                 : [
                     'The club secretary checks your details.',
@@ -406,8 +411,7 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
             <p>
               {cm ? (
                 <>
-                  <strong>{f.v.fullName}</strong> has been sent to the club for approval. Registered by {f.v.regName} (
-                  {labelFor(COMMITTEE_ROLES, f.v.regRole).toLowerCase()}).
+                  <strong>{f.v.fullName}</strong> is registered and approved. Registered by {asWho}.
                 </>
               ) : (
                 <>
@@ -429,23 +433,25 @@ export function RegisterForm({ contact, responseTime, instagram }: { contact: st
               <Progress f={f} keys={req} />
             </div>
             <p className="caption" style={{ margin: 0 }}>
-              <Icon name="info" size={16} /> Your Player ID (like <span className="tnum">xfc-26-0001</span>) is given when the club approves
-              the registration.
+              <Icon name="info" size={16} />{' '}
+              {cm ? (
+                <>
+                  The Player ID (like <span className="tnum">xfc-26-0001</span>) is given as soon as you submit.
+                </>
+              ) : (
+                <>
+                  Your Player ID (like <span className="tnum">xfc-26-0001</span>) is given when the club approves the registration.
+                </>
+              )}
             </p>
             <ErrorSummary f={f} />
             <ErrorBanner f={f} what="registration" contact={contact} />
 
-            <div className={'reveal-rows' + (cm ? ' o' : '')} aria-hidden={!cm}>
-              <div>
-                <Part n={1} title="Registered by" desc="The committee member submitting this form.">
-                  <div className="frow">
-                    <TextField f={f} k="regName" label="Your name" required autoComplete="name" />
-                    <SelectField f={f} k="regRole" label="Your role" options={opts(COMMITTEE_ROLES)} />
-                  </div>
-                  <TextField f={f} k="regPhone" label="Your phone" type="tel" required autoComplete="tel" inputMode="tel" />
-                </Part>
-              </div>
-            </div>
+            {cm && (
+              <Part n={1} title="Registered by" desc="Taken from the account you are signed in with.">
+                <p style={{ margin: 0, fontWeight: 600 }}>{asWho}</p>
+              </Part>
+            )}
 
             <Part n={++n} title="Player details">
               <TextField f={f} k="fullName" label="Player full name" required autoComplete={cm ? 'off' : 'name'} maxLength={LIMITS.name} />

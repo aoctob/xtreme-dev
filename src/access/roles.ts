@@ -74,6 +74,20 @@ export const isMember = any('member')
 
 /** Create, edit, delete player records; approve registrations; prepare and publish profiles. */
 export const canManagePlayers = any('super-admin', 'secretary', 'joint-secretary')
+/**
+ * Register a player on the club's behalf ("Committee" on /register). The entry is saved
+ * as approved straight away, so it is limited to the roles that approve registrations.
+ */
+export const canRegisterAsCommittee = canManagePlayers
+/** The submitter recorded on a committee registration, taken from the signed-in account. */
+export function committeeSubmitter(
+  user: (RoleUser & { name?: string | null; email?: string | null }) | null | undefined,
+): { name: string; role: 'secretary' | 'joint-secretary' | 'super-admin' } | null {
+  if (!canRegisterAsCommittee(user)) return null
+  const r = rolesOf(user)
+  const role = r.has('secretary') ? 'secretary' : r.has('joint-secretary') ? 'joint-secretary' : 'super-admin'
+  return { name: user?.name?.trim() || user?.email || 'Club official', role }
+}
 /** Read detailed player records (Treasurer sees a reduced set of fields). */
 export const canViewPlayerRecords = any(
   'super-admin',

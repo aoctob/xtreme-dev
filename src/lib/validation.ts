@@ -6,7 +6,6 @@
 import {
   BACHELOR_DEGREES,
   BLOOD_GROUPS,
-  COMMITTEE_ROLES,
   ENQUIRY_TYPES,
   EXPERIENCE_LEVELS,
   FEET,
@@ -177,11 +176,6 @@ function validateRegister(v: Values): Errors {
   const e: Errors = {}
   const committee = v.mode === 'committee'
   const minor = isMinor(v.dateOfBirth)
-  if (committee) {
-    if (blank(v.regName)) e.regName = 'Enter your name'
-    if (!normalisePhone(v.regPhone ?? '')) e.regPhone = 'Enter a 10-digit mobile number'
-    if (v.regRole && !oneOf(COMMITTEE_ROLES, v.regRole)) e.regRole = 'Choose a role from the list'
-  }
   if (blank(v.fullName) || v.fullName.trim().length < 2) e.fullName = 'Enter the player’s full name'
   dob(e, v, 'dateOfBirth', 'Enter the date of birth')
   const needPhone = !minor && !committee
@@ -257,7 +251,7 @@ export const FORM_FIELDS: Record<FormKind, string[]> = {
   sponsor: ['name', 'businessName', 'phone', 'email', 'interest', 'message', 'consent'],
   contact: ['type', 'name', 'email', 'phone', 'message'],
   register: [
-    'mode', 'regName', 'regRole', 'regPhone', 'fullName', 'dateOfBirth', 'phone', 'email', 'address',
+    'mode', 'fullName', 'dateOfBirth', 'phone', 'email', 'address',
     'guardianName', 'guardianPhone', 'guardianConsent', 'team', 'foot', 'position', 'secondPosition',
     'shirtNumber', 'previousClub', 'emergencyName', 'emergencyRelationship', 'emergencyPhone', 'medical',
     'confirm', 'consent', 'whatsapp', 'whatsappSame', 'bloodGroup', 'schoolName', 'bachelorDegree',
